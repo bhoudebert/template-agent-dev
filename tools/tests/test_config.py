@@ -46,6 +46,23 @@ class Defaults(unittest.TestCase):
         self.assertEqual(cfg.kind_of("INC-004"), "incident")
 
 
+class TestCommand(unittest.TestCase):
+    def test_a_configured_test_command_wins_and_a_missing_one_says_so(self):
+        import shutil
+        d = Path(tempfile.mkdtemp())
+        (d / "tools").mkdir()
+        for n in ("config.py", "miniyaml.py", "projecttest.sh"):
+            shutil.copy(ROOT / "tools" / n, d / "tools" / n)
+        (d / ".agents").mkdir()
+        (d / ".agents/pipeline.yaml").write_text("commands:\n  test: \"echo RAN-CONFIGURED\"\nstages: []\n")
+        r = subprocess.run(["sh", "tools/projecttest.sh"], cwd=d, text=True, capture_output=True)
+        self.assertEqual(r.stdout.strip(), "RAN-CONFIGURED")
+        (d / ".agents/pipeline.yaml").write_text("stages: []\n")
+        r = subprocess.run(["sh", "tools/projecttest.sh"], cwd=d, text=True, capture_output=True)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("commands:", r.stderr)
+
+
 class CustomPrefixAndPaths(unittest.TestCase):
     def setUp(self):
         config._CACHE.clear()

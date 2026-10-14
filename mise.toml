@@ -172,6 +172,10 @@ flag "--plan" help="show what would be removed, write nothing"
 '''
 run = 'sh tools/kit.sh uninstall $([ "${usage_plan}" = "true" ] && echo --plan)'
 
+[tasks."kit:todo"]
+description = "What is left to do in this repo, in order (install, trust, hooks, CONTEXT.md, model, tests, first story)"
+run = "sh tools/kit.sh todo"
+
 [tasks."kit:check"]
 description = "Fail if kit files in this repo still contain unresolved merge conflict markers"
 run = "sh tools/kit.sh check"

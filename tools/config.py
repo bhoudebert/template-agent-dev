@@ -13,10 +13,13 @@ Optional keys at the top level of .agents/pipeline.yaml; every default matches t
       stories: specs/stories
       decisions: docs/adr
       changes: openspec/changes   # also: architecture qa incidents runbooks releases specs
+    commands:
+      test: "cargo test --manifest-path backend/Cargo.toml && npm --prefix ui test"   # monorepo, or anything
 
     python tools/config.py regex story|incident|adr|runbook|any   # ERE for shell scripts
     python tools/config.py path stories
     python tools/config.py format story 12                         # PROJ-012
+    python tools/config.py command test                            # the configured test command, if any
 """
 import re
 import sys
@@ -38,7 +41,7 @@ _CACHE = {}
 class Config:
     def __init__(self, root=ROOT):
         self.root = Path(root)
-        self.ids, self.paths, self.patterns = dict(DEFAULT_IDS), dict(DEFAULT_PATHS), {}
+        self.ids, self.paths, self.patterns, self.commands = dict(DEFAULT_IDS), dict(DEFAULT_PATHS), {}, {}
         p = self.root / ".agents" / "pipeline.yaml"
         if p.exists():
             try:
@@ -53,6 +56,9 @@ class Config:
             for k, v in (data.get("paths") or {}).items():
                 if k in self.paths and v:
                     self.paths[k] = str(v).strip("/")
+            for k, v in (data.get("commands") or {}).items():
+                if v:
+                    self.commands[k] = str(v)
 
     # ids
     def prefix(self, kind):
@@ -113,6 +119,8 @@ def main(argv):
         print(cfg.regex(argv[1]).replace("(?:", "("))   # POSIX ERE for grep -E
     elif len(argv) >= 2 and argv[0] == "path":
         print(cfg.path(argv[1]))
+    elif len(argv) >= 2 and argv[0] == "command":
+        print(cfg.commands.get(argv[1], ""))
     elif len(argv) >= 3 and argv[0] == "format":
         print(cfg.format_id(argv[1], int(argv[2])))
     else:

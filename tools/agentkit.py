@@ -4,6 +4,7 @@
     agentkit.py install [--target DIR] [--from SRC] [--with ci,docs,release,pointers] [--plan]
     agentkit.py status  [--target DIR]
     agentkit.py update  [scope ...] [--target DIR] [--from SRC] [--plan]   scopes: tools agents docs ci all
+    agentkit.py todo    [--target DIR]                                      what is left to do here, in order
     agentkit.py check   [--target DIR]                                      unresolved conflict markers
     agentkit.py uninstall [--target DIR] [--plan] [--force]                 remove what the kit installed
 
@@ -16,6 +17,7 @@ import fnmatch
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -56,7 +58,6 @@ MARK_HASH = ("# agentkit:begin", "# agentkit:end")
 DEFAULT_UPDATE_SCOPES = ["tools", "agents", "docs"]   # `ci` is refreshed only when asked for
 ALL_SCOPES = ["tools", "agents", "docs", "ci"]
 SKIP_DIRS = {".git", "__pycache__", "node_modules", ".venv"}
-import re
 
 # A real conflict region (from `git merge-file -L local -L base -L kit`) has these exact marker lines.
 # Anchored, so documentation or code that merely *mentions* them is not a conflict.
@@ -763,6 +764,95 @@ def cmd_uninstall(args):
     return 0
 
 
+def _read(path):
+    try:
+        return Path(path).read_text(encoding="utf-8")
+    except OSError:
+        return ""
+
+
+def _configured(text, section, key):
+    """Value of `key:` inside a top-level `section:` of pipeline.yaml (no YAML library needed)."""
+    m = re.search(rf"^{section}:\s*\n((?:[ \t]+.*\n?)+)", text, re.M)
+    if not m:
+        return ""
+    v = re.search(rf"^[ \t]+{key}:\s*(.+)$", m.group(1), re.M)
+    return v.group(1).strip().strip("\"'") if v else ""
+
+
+def todo_items(target, lock, kit=None):
+    """[(done, title, how)] : what is left to do in this repository, in order."""
+    root = target.root
+    items = []
+    branch = run(["git", "branch", "--show-current"], cwd=root, check=False).stdout.strip()
+    dirty = target.dirty_tracked()
+    if not lock:
+        items.append((not dirty, "working tree clean (tracked files)", "commit or stash your changes"))
+        if kit is not None:
+            feats = []
+            blocking = [d for d, a, _ in plan_install(target, kit.entries(feats))
+                        if a == "collision-kept" and d.startswith("tools/") and d.endswith(".py")]
+            items.append((not blocking, "no file of yours in tools/ shares a name with a kit module",
+                          "rename: " + ", ".join(blocking) if blocking else ""))
+        items.append((False, "install the kit (a branch and one commit, nothing pushed)",
+                      "agentkit install --plan   then   agentkit install --with pointers"))
+        return items
+    items.append((True, f"kit {lock['version']} installed", ""))
+    merged = not branch.startswith("chore/agentkit-")
+    items.append((merged, "the install branch is reviewed and merged", "review the diff, then: mise run ship"))
+    trusted = True
+    if shutil.which("mise"):
+        p = run(["mise", "tasks"], cwd=root, check=False)
+        trusted = "trust" not in (p.stderr or "").lower() or p.returncode == 0
+    items.append((trusted, "mise trusts the task file", "mise trust"))
+    hooks = run(["git", "config", "core.hooksPath"], cwd=root, check=False).stdout.strip()
+    items.append((hooks == ".githooks", "git hooks enabled (no assistant names in commits, no push to main)", "mise run hooks"))
+    ctx = _read(root / "CONTEXT.md")
+    filled = bool(ctx.strip()) and "Fill this in per project" not in ctx and "(example)" not in ctx
+    items.append((filled, "CONTEXT.md describes your product, stack and test command", "edit CONTEXT.md: every agent reads it first"))
+    pipeline = _read(root / ".agents" / "pipeline.yaml")
+    markers = ("package.json", "pyproject.toml", "pytest.ini", "setup.cfg", "go.mod", "Cargo.toml", "pom.xml")
+    test_cmd = _configured(pipeline, "commands", "test")
+    has_test = bool(test_cmd) or any((root / m).exists() for m in markers)
+    items.append((has_test, "a test command the kit can run" + (f" ({test_cmd})" if test_cmd else ""),
+                  "set commands.test in .agents/pipeline.yaml (nothing auto-detected at the root)"))
+    env = _read(root / ".env")
+    items.append(("AGENT_MODEL" in env or "AGENT_CMD" in env, ".env sets a model (or AGENT_CMD)",
+                  "cp .env.example .env, then set AGENT_MODEL (and AGENT_REASONING_EFFORT=none for a thinking model)"))
+    stories = _configured(pipeline, "paths", "stories") or "docs/stories"
+    has_story = any(p.suffix == ".md" for p in (root / stories).glob("*.md")) if (root / stories).is_dir() else False
+    items.append((has_story, "a first story exists", 'mise run new "Try it" --text "A small request to prove the loop."'))
+    pointers = "agentkit:begin" in _read(root / "CLAUDE.md")
+    items.append((pointers, "assistants load AGENTS.md (optional)", "agentkit install --with pointers  (or: agentkit update --with pointers)"))
+    return items
+
+
+def cmd_todo(args):
+    target = Target(args.target)
+    lock = target.lock()
+    kit = None
+    if not lock:
+        try:
+            kit, cleanup = open_source(args.source, args.ref)
+            cleanup()
+        except SystemExit:
+            kit = None
+    items = todo_items(target, lock, kit)
+    done = sum(1 for ok, *_ in items if ok)
+    print(f"agentkit todo for {target.root}  ({done}/{len(items)} done)\n")
+    first = None
+    for ok, title, how in items:
+        print(f"  [{'x' if ok else ' '}] {title}")
+        if not ok and how:
+            print(f"        -> {how}")
+            first = first or how
+    if first:
+        print(f"\nnext: {first}")
+    else:
+        print("\nall done. Day to day: mise run orient / mise run next")
+    return 0
+
+
 def cmd_check(args):
     target = Target(args.target)
     lock = target.lock()
@@ -817,6 +907,11 @@ def main(argv=None):
     x.add_argument("--no-branch", action="store_true")
     x.add_argument("--no-commit", action="store_true")
     x.set_defaults(fn=cmd_uninstall)
+    td = sub.add_parser("todo", help="what is left to do in this repository, in order")
+    td.add_argument("--target", default=".")
+    td.add_argument("--from", dest="source", help="kit source (only used before install, to check collisions)")
+    td.add_argument("--ref")
+    td.set_defaults(fn=cmd_todo)
     c = sub.add_parser("check")
     c.add_argument("--target", default=".")
     c.set_defaults(fn=cmd_check)

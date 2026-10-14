@@ -28,6 +28,7 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `kit:install` | `<target> [--with ci,docs,release] [--plan]` | Install the kit into another repository, on a branch, one commit |
 | `kit:status` | | In an adopting repo: clean / you edited / kit changed / both |
 | `kit:update` | `[tools\|agents\|docs\|ci\|all] [--plan]` | Update the kit on a new branch; `ci` only when asked |
+| `kit:todo` | | What is left to do in this repo, in order (also `agentkit todo`, usable before installing) |
 | `kit:check` | | Fail on unresolved conflict markers in kit files |
 | `kit:reconcile` | `[--brief] [--plan]` | A model (or `--brief`: your assistant) resolves update conflicts |
 | `kit:uninstall` | `[--plan]` | Remove what the kit installed, on a branch |
@@ -145,6 +146,9 @@ paths:                              # stories architecture decisions qa incident
 |---|---|
 | `mise run new "..." --id PROJ-4821` | create the story with an existing tracker key instead of the next number (the file is `PROJ-4821.md`) |
 | `python3 tools/config.py regex story` / `path stories` / `format story 12` | what the shell scripts and CI call |
+
+`commands.test` (same file) is the command `mise run test`, `check`, `ship` and CI run for **your** tests. Set it
+for a monorepo or a custom runner; otherwise the root is auto-detected (npm, pytest, go, cargo, mvn).
 
 Changing the prefix does not rename existing files: rename them (and their `id:` / `story:` fields) in the same PR.
 

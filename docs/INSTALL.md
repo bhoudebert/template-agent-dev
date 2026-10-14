@@ -113,6 +113,18 @@ After `agentkit install`, the repo has `.config/mise/conf.d/agentkit.toml`. Run 
 is yours to add): `mise use "github:bhoudebert/template-agent-dev@0.1.0"` records the version under `[tools]`,
 and `mise install` then gives every teammate the same `agentkit` (subject to the release-age cooldown in step 1).
 
+### "What is left to do?"
+
+Any time, in any repo, before or after installing:
+
+```sh
+agentkit todo            # or, inside an installed repo: mise run kit:todo
+```
+
+It inspects *this* repository and prints an ordered checklist with the command that fixes each open item
+(clean tree, no name collision in `tools/`, install, merged, `mise trust`, hooks, a filled `CONTEXT.md`, a test
+command, a model in `.env`, a first story, assistant entry files). It writes nothing.
+
 ## 2. See what it would do
 
 ```sh
@@ -152,7 +164,17 @@ mise run ship         # checks, push, open the PR; merge it like any other
 | `cp .env.example .env`, set `AGENT_MODEL` | which model runs the stages; `.env` is git-ignored |
 | `mise run hooks` | blocks assistant names in commit messages and any push to `main` |
 | `mise run doctor` | checks python, git, hooks, endpoint, that the model is served |
-| `mise run check` | runs the validators and **your** tests (npm, pytest, go, cargo and mvn are auto-detected) |
+| `mise run check` | runs the validators and **your** tests (npm, pytest, go, cargo and mvn are auto-detected **at the repo root**) |
+
+A monorepo, or any layout without a root-level marker, needs the test command spelled out once, in
+`.agents/pipeline.yaml`:
+
+```yaml
+commands:
+  test: "cargo test --manifest-path backend/Cargo.toml && npm --prefix ui test"
+```
+
+Without one, `mise run test` stops with a message instead of pretending that nothing failed.
 
 Pick a model (one of):
 
