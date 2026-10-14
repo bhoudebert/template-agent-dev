@@ -81,7 +81,7 @@ This is a loop, not a step. See [the developer loop](#the-developer-loop).
 - **After** on `pass`: `mise run advance US-002 done` (needs the QA report with `verdict: pass`).
 
 ### 7. Review (reviewer) and merge
-- **Agent**: runs on the PR in CI (`agent-review`, only when a model is configured there), or locally with `mise run review` (id from the branch; `--post` to comment on the PR). One comment, findings ranked blocker/major/minor/nit.
+- **Agent**: runs on the PR in CI (`agent-review`, only when a model is configured there), or locally with `mise run review` (the whole PR against its base branch; `--post` to comment on the PR, `--commit` for just the last commit). One comment, findings ranked blocker/major/minor/nit.
 - **Check**: you are the reviewer; the agent is a second pair of eyes. Fix blockers.
 - **After**: squash-merge into `main`. The PR title is the commit and must be a Conventional Commit, e.g. `feat(US-002): export invoices as CSV`.
 

@@ -32,6 +32,8 @@ jobs:
       AGENT_REASONING_EFFORT: ${{ vars.AGENT_REASONING_EFFORT }}
       AGENT_MAX_TOKENS: ${{ vars.AGENT_MAX_TOKENS }}
       AGENT_BASE_REF: origin/${{ github.base_ref }}
+      AGENT_DIFF_SCOPE: whole PR (all commits) vs origin/${{ github.base_ref }}
+      REVIEW_SCOPE: whole PR (all commits) vs origin/${{ github.base_ref }}
     steps:
       - name: Is a model configured?
         id: cfg

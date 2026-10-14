@@ -148,12 +148,13 @@ flag "--plan" help="call LLM, show files, write nothing"
 run = 'sh tools/stage.sh qa "${usage_id}" "${usage_dry}" "${usage_plan}"'
 
 [tasks.review]
-description = "Review this branch locally and print it:  mise run review [id] [--post]"
+description = "Review the WHOLE PR/branch locally:  mise run review [id] [--post] [--commit]"
 usage = '''
 arg "[id]" help="US-NNN / INC-NNN; default: from the branch name"
-flag "--post" help="post the review as a comment on the branch's open PR"
+flag "--post" help="create/update the single review comment on the branch's open PR"
+flag "--commit" help="review only the last commit (cannot be combined with --post)"
 '''
-run = 'sh tools/review.sh "${usage_id}" "${usage_post}"'
+run = 'sh tools/review.sh "${usage_id}" "${usage_post}" "${usage_commit}"'
 
 [tasks."agent:review"]
 description = "Review the PR diff (reviewer)"

@@ -14,7 +14,7 @@ sha=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
 tmp=$(mktemp)
 {
   printf '%s\n' "$marker"
-  printf '_Automated review of commit `%s`. Updated in place on every run; treat as input, not a gate._\n\n' "$sha"
+  printf '_Automated review at commit `%s` (scope: %s). Updated in place on every run; treat as input, not a gate._\n\n' "$sha" "${REVIEW_SCOPE:-whole PR}"
   cat "$file"
 } > "$tmp"
 id=$(gh api --paginate "repos/$repo/issues/$pr/comments" \

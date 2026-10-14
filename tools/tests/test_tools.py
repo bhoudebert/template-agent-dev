@@ -263,6 +263,82 @@ class Diff(unittest.TestCase):
         self.assertTrue((d / ".agents/out/review-US-042.md").exists())
 
 
+class ReviewScope(unittest.TestCase):
+    """Whole-PR vs last-commit scope, stack-aware base, post+commit refusal."""
+
+    def git(self, d, *a):
+        import subprocess
+        return subprocess.run(["git", "-C", str(d), "-c", "user.name=T", "-c", "user.email=t@example.com", *a],
+                              check=True, capture_output=True, text=True)
+
+    def repo(self):
+        """main(init) <- stack(commit A) <- feature/US-042-x(commits B, C); PR base is `stack`."""
+        d = Path(tempfile.mkdtemp())
+        shutil.copytree(ROOT / "tools", d / "tools", ignore=shutil.ignore_patterns("tests", "__pycache__"))
+        for name in (".agents", "AGENTS.md", "CONTEXT.md"):
+            src = ROOT / name
+            shutil.copytree(src, d / name) if src.is_dir() else shutil.copy(src, d / name)
+        self.git(d, "init", "-q", "-b", "main")
+        (d / "f.txt").write_text("base\n")
+        self.git(d, "add", "-A"); self.git(d, "commit", "-q", "-m", "init")
+        self.git(d, "switch", "-q", "-c", "stack")
+        (d / "a.txt").write_text("PARENT-PR-CHANGE\n")
+        self.git(d, "add", "-A"); self.git(d, "commit", "-q", "-m", "feat: parent")
+        self.git(d, "switch", "-q", "-c", "feature/US-042-x")
+        (d / "b.txt").write_text("FIRST-COMMIT-OF-PR\n")
+        self.git(d, "add", "-A"); self.git(d, "commit", "-q", "-m", "feat(US-042): first")
+        (d / "c.txt").write_text("LAST-COMMIT-OF-PR\n")
+        self.git(d, "add", "-A"); self.git(d, "commit", "-q", "-m", "feat(US-042): last")
+        bin_dir = d / "bin"
+        bin_dir.mkdir()
+        fake = bin_dir / "gh"
+        fake.write_text("""#!/bin/sh
+case "$*" in
+  *baseRefName*) echo stack ;;
+  *"--json number"*) echo 9 ;;
+  *) exit 0 ;;
+esac
+""")
+        fake.chmod(0o755)
+        (d / "reply.txt").write_text("## Review\nok\n")
+        (d / "cmd.sh").write_text("#!/bin/sh\ncat > stdin.txt\ncat reply.txt\n")
+        return d
+
+    def run_review(self, d, *args):
+        import subprocess
+        env = dict(os.environ, AGENT_PROVIDER="cmd", AGENT_CMD=f"sh {d}/cmd.sh",
+                   PATH=f"{d}/bin:{os.environ['PATH']}")
+        env.pop("AGENT_BASE_REF", None)
+        return subprocess.run(["sh", "tools/review.sh", *args], cwd=d, env=env, capture_output=True, text=True)
+
+    def test_default_reviews_whole_pr_against_its_own_base_not_main(self):
+        d = self.repo()
+        proc = self.run_review(d)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        prompt = (d / "stdin.txt").read_text()
+        self.assertIn("FIRST-COMMIT-OF-PR", prompt)       # every commit of the PR
+        self.assertIn("LAST-COMMIT-OF-PR", prompt)
+        self.assertNotIn("PARENT-PR-CHANGE", prompt)      # the parent PR is not part of this review
+        self.assertIn("# scope: whole branch: 2 commit(s) vs", prompt)
+        self.assertIn("stack", prompt)
+
+    def test_commit_flag_reviews_only_the_last_commit(self):
+        d = self.repo()
+        proc = self.run_review(d, "", "", "true")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        prompt = (d / "stdin.txt").read_text()
+        self.assertIn("LAST-COMMIT-OF-PR", prompt)
+        self.assertNotIn("FIRST-COMMIT-OF-PR", prompt)
+        self.assertIn("# scope: last commit", prompt)
+
+    def test_post_with_commit_is_refused(self):
+        d = self.repo()
+        proc = self.run_review(d, "", "true", "true")
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("refusing --post with --commit", proc.stderr)
+        self.assertFalse((d / "stdin.txt").exists())      # the model was never called
+
+
 class PostReview(unittest.TestCase):
     """post_review.sh against a fake `gh` that logs its calls."""
 
