@@ -1,0 +1,178 @@
+# mise en place for AgenticDev. Run `mise tasks` to list everything.
+# Stdlib-only Python: any python3 >= 3.10 on PATH works, so none is pinned here.
+min_version = "2024.11.0"
+
+[env]
+# Defaults = local Ollama. Override in .env (git-ignored; see .env.example).
+AGENT_PROVIDER = "openai"
+AGENT_BASE_URL = "http://localhost:11434/v1"
+AGENT_MODEL = "llama3.1"
+_.file = { path = ".env" }
+
+# ---------- dev ----------
+[tasks.test]
+description = "Run unit tests of the tools"
+run = "python3 -m unittest discover -s tests"
+
+[tasks.validate]
+description = "Validate artifacts against schemas"
+run = "python3 tools/validate.py"
+
+[tasks.trace]
+description = "Traceability check (story -> spec -> ADR -> QA)"
+run = "python3 tools/trace_check.py"
+
+[tasks.check]
+description = "Everything deterministic: validate + trace + tests"
+depends = ["validate", "trace", "test"]
+
+[tasks.doctor]
+description = "Check python, git, provider/model/endpoint setup"
+run = "python3 tools/doctor.py"
+
+[tasks.stages]
+description = "List pipeline stages with role, gate, outputs"
+run = "python3 tools/agentrun.py list"
+
+# ---------- work items ----------
+[tasks.new]
+description = "Create a raw story with next id:  mise run new Export invoices as CSV"
+usage = '''
+arg "<title>" var=#true help="Story title (no quotes needed)"
+'''
+run = 'python3 tools/items.py new-story ${usage_title}'
+
+[tasks.incident]
+description = "Create an incident file from template:  mise run incident Checkout 500s"
+usage = '''
+arg "<title>" var=#true help="Incident title"
+'''
+run = 'python3 tools/items.py new-incident ${usage_title}'
+
+[tasks.status]
+description = "List stories, their status and the next stage"
+run = "python3 tools/items.py list"
+
+[tasks.advance]
+description = "Guarded status bump after a gate:  mise run advance US-002 approved"
+usage = '''
+arg "<id>" help="Story id"
+arg "<status>" help="draft|enriched|approved|specified|designed|implemented|done"
+flag "--force" help="skip step/trace guard"
+'''
+run = 'python3 tools/items.py set-status "${usage_id}" "${usage_status}" ${usage_force:+--force}'
+
+# ---------- agent stages ----------
+# default: call LLM, write files, run checks.  --dry = prompt only.  --plan = no write.
+
+[tasks."agent:story"]
+description = "Enrich a raw story (analyst)"
+alias = "story"
+usage = '''
+arg "<id>" help="Work item id, e.g. US-002"
+flag "--dry" help="print prompt only, no LLM call"
+flag "--plan" help="call LLM, show files, write nothing"
+'''
+run = 'sh tools/stage.sh story "${usage_id}" "${usage_dry}" "${usage_plan}"'
+
+[tasks."agent:spec"]
+description = "Write the OpenSpec change (spec-writer)"
+alias = "spec"
+usage = '''
+arg "<id>" help="Work item id, e.g. US-002"
+flag "--dry" help="print prompt only, no LLM call"
+flag "--plan" help="call LLM, show files, write nothing"
+'''
+run = 'sh tools/stage.sh spec "${usage_id}" "${usage_dry}" "${usage_plan}"'
+
+[tasks."agent:design"]
+description = "Write design note + ADRs (architect)"
+alias = "design"
+usage = '''
+arg "<id>" help="Work item id, e.g. US-002"
+flag "--dry" help="print prompt only, no LLM call"
+flag "--plan" help="call LLM, show files, write nothing"
+'''
+run = 'sh tools/stage.sh design "${usage_id}" "${usage_dry}" "${usage_plan}"'
+
+[tasks."agent:implement"]
+description = "Implement next tasks with tests (developer)"
+alias = "implement"
+usage = '''
+arg "<id>" help="Work item id, e.g. US-002"
+flag "--dry" help="print prompt only, no LLM call"
+flag "--plan" help="call LLM, show files, write nothing"
+'''
+run = 'sh tools/stage.sh implement "${usage_id}" "${usage_dry}" "${usage_plan}"'
+
+[tasks."agent:test"]
+description = "Add missing tests (test-engineer)"
+usage = '''
+arg "<id>" help="Work item id, e.g. US-002"
+flag "--dry" help="print prompt only, no LLM call"
+flag "--plan" help="call LLM, show files, write nothing"
+'''
+run = 'sh tools/stage.sh test "${usage_id}" "${usage_dry}" "${usage_plan}"'
+
+[tasks."agent:qa"]
+description = "QA report vs acceptance criteria"
+alias = "qa"
+usage = '''
+arg "<id>" help="Work item id, e.g. US-002"
+flag "--dry" help="print prompt only, no LLM call"
+flag "--plan" help="call LLM, show files, write nothing"
+'''
+run = 'sh tools/stage.sh qa "${usage_id}" "${usage_dry}" "${usage_plan}"'
+
+[tasks."agent:review"]
+description = "Review the PR diff (reviewer)"
+alias = "review"
+usage = '''
+arg "<id>" help="Work item id, e.g. US-002"
+flag "--dry" help="print prompt only, no LLM call"
+flag "--plan" help="call LLM, show files, write nothing"
+'''
+run = 'sh tools/stage.sh review "${usage_id}" "${usage_dry}" "${usage_plan}"'
+
+[tasks."agent:release"]
+description = "Release notes + go/no-go"
+alias = "release"
+usage = '''
+arg "<id>" help="Work item id, e.g. US-002"
+flag "--dry" help="print prompt only, no LLM call"
+flag "--plan" help="call LLM, show files, write nothing"
+'''
+run = 'sh tools/stage.sh release "${usage_id}" "${usage_dry}" "${usage_plan}"'
+
+[tasks."agent:diagnose"]
+description = "Triage a prod incident (sre)"
+alias = "diagnose"
+usage = '''
+arg "<id>" help="Work item id, e.g. INC-001"
+flag "--dry" help="print prompt only, no LLM call"
+flag "--plan" help="call LLM, show files, write nothing"
+'''
+run = 'sh tools/stage.sh diagnose "${usage_id}" "${usage_dry}" "${usage_plan}"'
+
+[tasks.agent]
+description = "Any stage:  mise run agent spec US-002 [--dry|--plan]"
+usage = '''
+arg "<stage>" help="story|spec|design|implement|test|qa|review|release|diagnose"
+arg "<id>" help="Work item id"
+flag "--dry"
+flag "--plan"
+'''
+run = 'sh tools/stage.sh "${usage_stage}" "${usage_id}" "${usage_dry}" "${usage_plan}"'
+
+# ---------- setup ----------
+[tasks."install:github"]
+description = "Copy CI + agent workflows to .github/workflows"
+run = "sh adapters/install.sh github"
+
+[tasks."install:tools"]
+description = "Write CLAUDE.md / copilot / cursor pointers to AGENTS.md"
+run = "sh adapters/install.sh tools"
+
+[tasks.env]
+description = "Show effective AGENT_* settings (secrets redacted)"
+run = "env | grep '^AGENT_' | sed -E 's/(KEY=).*/\\1***/' | sort"

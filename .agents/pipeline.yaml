@@ -1,0 +1,99 @@
+# Declarative pipeline: stage -> role -> inputs -> outputs -> checks -> gate.
+# Vendor-free. Read by tools/agentrun.py; any CI or human can run a stage.
+# `{id}` = work item id (US-001, INC-001, ...). `@diff` = git diff of the PR.
+# model tier: cheap | strong  (mapped to AGENT_MODEL_CHEAP / AGENT_MODEL_STRONG)
+version: 1
+stages:
+  - name: story
+    role: analyst
+    goal: Enrich the raw request into a testable user story (INVEST, Given/When/Then, edge cases, risks).
+    in: [docs/stories/{id}.md, CONTEXT.md]
+    out: [docs/stories/{id}.md]
+    template: story
+    skills: []
+    check: [validate]
+    gate: human:product-owner
+    model: cheap
+
+  - name: spec
+    role: spec-writer
+    goal: Turn the approved story into an OpenSpec change (proposal, tasks, spec deltas).
+    in: [docs/stories/{id}.md, "openspec/specs/**/spec.md"]
+    out: ["openspec/changes/{id}/**"]
+    skills: [write-openspec]
+    check: [validate]
+    gate: human:product-owner+tech-lead
+    model: strong
+
+  - name: design
+    role: architect
+    goal: Produce a design note and ADR(s) for the decisions this change forces.
+    in: [docs/stories/{id}.md, "openspec/changes/{id}/**/*.md", "docs/decisions/*.md", "docs/architecture/*.md"]
+    out: ["docs/architecture/{id}.md", "docs/decisions/ADR-*.md"]
+    template: adr
+    skills: [write-adr]
+    check: [validate, trace]
+    gate: human:tech-lead
+    model: strong
+
+  - name: implement
+    role: developer
+    goal: Implement the next unchecked task(s) in tasks.md with tests. Smallest diff that satisfies the spec.
+    in: ["openspec/changes/{id}/**/*.md", "docs/architecture/{id}.md", "docs/decisions/*.md", "src/**", "tests/**"]
+    out: ["src/**", "tests/**", "openspec/changes/{id}/tasks.md"]
+    skills: []
+    check: []
+    gate: ci+human:code-review
+    model: strong
+
+  - name: test
+    role: test-engineer
+    goal: Add integration/edge-case/property tests so every spec scenario is covered; report gaps.
+    in: ["openspec/changes/{id}/**/*.md", "src/**", "tests/**"]
+    out: ["tests/**"]
+    skills: []
+    check: []
+    gate: ci
+    model: strong
+
+  - name: qa
+    role: qa
+    goal: Verify the change against acceptance criteria and spec scenarios; write the QA report with a verdict.
+    in: [docs/stories/{id}.md, "openspec/changes/{id}/**/*.md", "tests/**", "@diff"]
+    out: ["docs/qa/{id}.md"]
+    template: qa-report
+    skills: [qa-report]
+    check: [validate]
+    gate: human:qa-or-po
+    model: strong
+
+  - name: review
+    role: reviewer
+    goal: Review the PR diff for correctness, security, spec conformance and maintainability. Output PR comments.
+    in: ["@diff", "openspec/changes/{id}/**/*.md", "docs/decisions/*.md"]
+    out: [".agents/out/review-{id}.md"]
+    skills: []
+    check: []
+    gate: human:merge
+    model: strong
+
+  - name: release
+    role: release
+    goal: Write release notes/changelog entry and a go/no-go checklist from merged work.
+    in: [docs/stories/{id}.md, "docs/qa/{id}.md", "@diff"]
+    out: ["docs/releases/{id}.md"]
+    skills: []
+    check: []
+    gate: human:release-manager
+    model: cheap
+
+  - name: diagnose
+    role: sre
+    goal: Triage a production incident from the supplied evidence; produce a hypothesis-ranked incident report and, if useful, a runbook.
+    in: [docs/incidents/{id}.md, "docs/runbooks/*.md"]
+    out: ["docs/incidents/{id}.md", "docs/runbooks/*.md"]
+    template: incident
+    skills: [triage-incident]
+    check: [validate]
+    gate: human:on-call
+    model: strong

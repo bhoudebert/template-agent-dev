@@ -1,0 +1,6 @@
+.agents/runs/
+.agents/out/
+__pycache__/
+*.pyc
+.venv/
+.env

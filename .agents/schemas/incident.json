@@ -1,0 +1,11 @@
+{
+  "frontmatter": {
+    "required": ["id", "type", "title", "severity", "status"],
+    "enums": {
+      "severity": ["sev1", "sev2", "sev3", "sev4"],
+      "status": ["open", "mitigated", "resolved"]
+    },
+    "patterns": {"id": "^INC-\\d{3,}$"}
+  },
+  "sections": ["Impact", "Evidence", "Hypotheses", "Recommended actions", "Not verified"]
+}

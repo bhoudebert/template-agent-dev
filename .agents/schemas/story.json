@@ -1,0 +1,38 @@
+{
+  "frontmatter": {
+    "required": [
+      "id",
+      "type",
+      "title",
+      "status",
+      "owner"
+    ],
+    "enums": {
+      "status": [
+        "draft",
+        "enriched",
+        "approved",
+        "specified",
+        "designed",
+        "implemented",
+        "done"
+      ]
+    },
+    "patterns": {
+      "id": "^US-\\d{3,}$"
+    }
+  },
+  "sections": [
+    "Story",
+    "Acceptance criteria",
+    "Edge cases",
+    "Out of scope",
+    "Open questions"
+  ],
+  "section_patterns": {
+    "Acceptance criteria": "(?is)given\\b.*\\bwhen\\b.*\\bthen\\b"
+  },
+  "relaxed_when": {
+    "status": "draft"
+  }
+}
