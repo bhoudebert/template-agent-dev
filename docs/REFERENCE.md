@@ -8,10 +8,10 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 
 | Task | Arguments | Effect |
 |---|---|---|
-| `new` | `<title...> [--text "<request>"]` | Create the next `docs/stories/US-NNN.md` as a raw draft; `--text` fills in the request, otherwise edit the file |
+| `new` | `<title...> [--text "<request>"] [--bug]` | Create the next `docs/stories/US-NNN.md` as a raw draft; `--text` fills in the request, otherwise edit the file; `--bug` makes it a bug-shaped story (`kind: bug`) |
 | `incident` | `<title...>` | Create the next `docs/incidents/INC-NNN.md` from the template |
-| `hooks` | | Enable `.githooks` (commit-msg blocks agent names) |
-| `ship` | `[--draft] [--base <branch>]` | Checks, push, open PR; refuses on `main` |
+| `hooks` | | Enable `.githooks`: commit-msg blocks assistant names, pre-push refuses a push to `main` |
+| `ship` | `[--draft] [--base <branch>] [--emergency]` | Checks, push, open PR; refuses on `main`. `--emergency` skips validate, trace, tests and evidence, never the branch/PR rule or the attribution check |
 | `skip` | `<id> <spec\|design\|spec,design\|none> --reason "<why>"` | Declare that a story needs no spec and/or no design (or clear it) |
 | `branch` | `<id>` | `git checkout -b feature/<US-id>-<slug>` (`fix/<INC-id>-<slug>` for incidents) |
 | `status` | | List stories, status, next stage |
@@ -154,6 +154,7 @@ Enums: story `status` = draft, enriched, approved, specified, designed, implemen
 | `skip: [spec, design]` | This story needs no OpenSpec change and/or no design. `trace_check` does not demand them; `advance` may step over the matching statuses. |
 | `skip: [tests]` | Waives the evidence floor (docs, config or infra only). Does not change the status path. |
 | `skip_reason` | Required whenever `skip` is set. Say why (e.g. "copy change", "config only"). |
+| `kind: bug` | Optional. A bug-shaped story: sections Symptom, Expected behaviour, Reproduction, Acceptance criteria, Out of scope, Open questions. Same ids and ladder. |
 
 An ADR is never required by itself: a design note without an ADR satisfies `designed`, and `skip: [design]` needs neither.
 

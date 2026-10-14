@@ -26,6 +26,7 @@ NEXT_STAGE = {
 
 
 PLACEHOLDER = "Describe the request in your own words here."
+PLACEHOLDER_BUG = "Describe the symptom: what happens, what you expected, how to reproduce it."
 
 
 def _next_id(prefix, folder, root):
@@ -38,13 +39,15 @@ def _clean(title):
     return re.sub(r"[:#\n]+", " ", title).strip()
 
 
-def new_story(title, root=ROOT, text=""):
+def new_story(title, root=ROOT, text="", kind="feature"):
     sid = _next_id("US", "docs/stories", root)
     path = Path(root) / "docs" / "stories" / f"{sid}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
+    kind_line = "kind: bug\n" if kind == "bug" else ""
+    default = PLACEHOLDER_BUG if kind == "bug" else PLACEHOLDER
     path.write_text(
-        f"---\nid: {sid}\ntype: story\ntitle: {_clean(title)}\nstatus: draft\nowner: product-owner\n---\n"
-        f"{text or PLACEHOLDER}\n", encoding="utf-8")
+        f"---\nid: {sid}\ntype: story\n{kind_line}title: {_clean(title)}\nstatus: draft\nowner: product-owner\n---\n"
+        f"{text or default}\n", encoding="utf-8")
     return sid, path
 
 
@@ -141,6 +144,7 @@ def main(argv=None):
     ns = sub.add_parser("new-story")
     ns.add_argument("title", nargs="+")
     ns.add_argument("--text", default="", help="the request in your own words (else edit the file)")
+    ns.add_argument("--bug", action="store_true", help="a bug-shaped story: symptom, expected, reproduction")
     sub.add_parser("new-incident").add_argument("title", nargs="+")
     sub.add_parser("list")
     sub.add_parser("branch").add_argument("id")
@@ -154,7 +158,7 @@ def main(argv=None):
     s.add_argument("--force", action="store_true")
     a = ap.parse_args(argv)
     if a.cmd == "new-story":
-        sid, path = new_story(" ".join(a.title), text=a.text)
+        sid, path = new_story(" ".join(a.title), text=a.text, kind="bug" if a.bug else "feature")
         rel = os.path.relpath(path, ROOT)
         if a.text:
             print(f"created {rel} with your request\nnext: `mise run branch {sid}`, then `mise run story {sid}`")

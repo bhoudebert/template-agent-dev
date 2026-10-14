@@ -16,6 +16,10 @@
         "designed",
         "implemented",
         "done"
+      ],
+      "kind": [
+        "feature",
+        "bug"
       ]
     },
     "patterns": {
@@ -35,5 +39,20 @@
   "relaxed_when": {
     "status": "draft"
   },
-  "filename_starts_with": "id"
+  "filename_starts_with": "id",
+  "kinds": {
+    "bug": {
+      "sections": [
+        "Symptom",
+        "Expected behaviour",
+        "Reproduction",
+        "Acceptance criteria",
+        "Out of scope",
+        "Open questions"
+      ],
+      "section_patterns": {
+        "Acceptance criteria": "(?is)given\\b.*\\bwhen\\b.*\\bthen\\b"
+      }
+    }
+  }
 }

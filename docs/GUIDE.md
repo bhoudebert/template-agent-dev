@@ -199,6 +199,11 @@ assistant:  mise run orient            # rules + state
 
 Not every story needs a spec, a design or an ADR: `mise run skip US-003 spec,design --reason "copy fix"`. A skipped spec still needs evidence: a changed test (a non-regression test counts) or a spec; `skip: [tests]` waives it for docs/config only.
 
+## Bugs and emergencies in one minute
+
+- **A bug that can wait** is a story: `mise run new "Totals ignore VAT" --bug --text "..."`, then the usual flow. If the spec was already right: `mise run skip US-NNN spec,design --reason "spec already correct"`; you still add a non-regression test.
+- **An emergency** (CI broken, production down) needs no story: `git switch -c fix/<what>`, fix, `mise run ship --emergency`, merge it yourself. Local checks are skipped; the branch and PR are not, and nothing is ever pushed to `main`.
+
 ## Git, versions, releases
 
 - **Branches**: only `main` (always releasable) + one `feature/<US-id>-<slug>` per story. `mise run branch US-002` creates it. Squash-merge PRs.

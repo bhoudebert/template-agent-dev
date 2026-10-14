@@ -44,8 +44,9 @@ description = "Create a raw story with next id:  mise run new Export invoices as
 usage = '''
 arg "<title>" var=#true help="Story title (no quotes needed)"
 flag "--text <text>" help="the request in your own words; otherwise edit the file afterwards"
+flag "--bug" help="a bug: symptom, expected behaviour, reproduction (same US ladder, bug-shaped story)"
 '''
-run = 'python3 tools/items.py new-story ${usage_title} ${usage_text:+--text "$usage_text"}'
+run = 'python3 tools/items.py new-story ${usage_title} ${usage_text:+--text "$usage_text"} $([ "${usage_bug}" = "true" ] && echo --bug)'
 
 [tasks.incident]
 description = "Create an incident file from template:  mise run incident Checkout 500s"
@@ -66,12 +67,13 @@ description = "Enable the repo git hooks (blocks agent names in commit messages)
 run = "git config core.hooksPath .githooks && echo 'hooks enabled: .githooks'"
 
 [tasks.ship]
-description = "Checks + push branch + open PR (PR mode):  mise run ship [--draft] [--base parent-branch]"
+description = "Checks + push branch + open PR (never main):  mise run ship [--draft] [--base b] [--emergency]"
 usage = '''
 flag "--draft" help="open as draft PR"
 flag "--base <branch>" default="main" help="PR base; use the parent branch for stacked PRs"
+flag "--emergency" help="skip validate, trace, tests and evidence so a broken pipeline cannot block the fix"
 '''
-run = 'sh tools/ship.sh "${usage_base}" "${usage_draft}"'
+run = 'sh tools/ship.sh "${usage_base}" "${usage_draft}" "${usage_emergency}"'
 
 [tasks.orient]
 description = "Prompt mode: rules in force, where this branch/story is, and what is next"

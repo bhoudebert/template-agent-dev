@@ -148,6 +148,12 @@ def build_prompt(stage, item_id, root=ROOT):
     templates = stage.get("template") or []
     if isinstance(templates, str):
         templates = [templates]
+    if stage.get("name") == "story":  # a bug is a story with a bug-shaped template
+        sp = root / "docs" / "stories" / f"{item_id}.md"
+        if sp.exists():
+            m, _ = miniyaml.split_frontmatter(sp.read_text(encoding="utf-8"))
+            if m and m.get("kind") == "bug":
+                templates = ["story-bug" if t == "story" else t for t in templates]
     for template in templates:
         tpl = _read(root / ".agents" / "templates" / f"{template}.md")
         if tpl is None:
@@ -219,7 +225,7 @@ def preflight(stage_name, item_id, root=ROOT):
             return [f"{path.relative_to(root)} does not exist: `mise run new <title>` first"]
         _, body = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
         text = body.strip()
-        if text in ("", items.PLACEHOLDER) or len(text) < 15:
+        if text in ("", items.PLACEHOLDER, items.PLACEHOLDER_BUG) or len(text) < 15:
             return [f"{path.relative_to(root)} has no request yet (only the title). Write what is wanted "
                     f"in your own words in that file, then run the story stage again. "
                     f"(`mise run new <title> --text \"...\"` does it in one go.)"]
