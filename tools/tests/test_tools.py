@@ -342,7 +342,7 @@ esac
 class PostReview(unittest.TestCase):
     """post_review.sh against a fake `gh` that logs its calls."""
 
-    def run_script(self, existing_id):
+    def run_script(self, existing_id, fail_list=False, expect_ok=True):
         import subprocess
         d = Path(tempfile.mkdtemp())
         log = d / "calls.log"
@@ -354,7 +354,7 @@ echo "$@" >> {log}
 case "$1 $2" in
   "repo view") echo "o/r" ;;
   "api user") echo "me" ;;
-  "api --paginate") echo "{existing_id}" ;;
+  "api --paginate") {'echo "denied" >&2; exit 1' if fail_list else f'echo "{existing_id}"'} ;;
 esac
 exit 0
 """)
@@ -364,8 +364,15 @@ exit 0
         env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
         proc = subprocess.run(["sh", str(ROOT / "tools/post_review.sh"), str(review), "8"],
                               cwd=ROOT, env=env, capture_output=True, text=True)
-        self.assertEqual(proc.returncode, 0, proc.stderr)
-        return log.read_text(), proc.stdout
+        if expect_ok:
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+        return log.read_text(), proc.stdout + proc.stderr
+
+    def test_listing_failure_never_creates_a_duplicate(self):
+        calls, out = self.run_script("", fail_list=True, expect_ok=False)
+        self.assertNotIn("pr comment", calls)
+        self.assertNotIn("PATCH", calls)
+        self.assertIn("cannot list comments", out)
 
     def test_updates_existing_comment_instead_of_adding(self):
         calls, out = self.run_script("12345")

@@ -17,9 +17,15 @@ tmp=$(mktemp)
   printf '_Automated review at commit `%s` (scope: %s). Updated in place on every run; treat as input, not a gate._\n\n' "$sha" "${REVIEW_SCOPE:-whole PR}"
   cat "$file"
 } > "$tmp"
-id=$(gh api --paginate "repos/$repo/issues/$pr/comments" \
-  -q ".[] | select(.user.login == \"$me\") | select((.body | contains(\"agent-review:v1\")) or ((.body | startswith(\"# Review:\")) and (.body | contains(\"## Findings\")))) | .id" \
-  | head -1)
+# Listing must succeed: if it fails (auth, permissions) we must NOT fall through to creating
+# a new comment, or every run would add a duplicate. Fail loudly instead.
+ids=$(gh api --paginate "repos/$repo/issues/$pr/comments" \
+  -q ".[] | select(.user.login == \"$me\") | select((.body | contains(\"agent-review:v1\")) or ((.body | startswith(\"# Review:\")) and (.body | contains(\"## Findings\")))) | .id") || {
+  echo "post_review: cannot list comments on PR #$pr (is gh authenticated, with pull-requests: write?). Nothing posted." >&2
+  rm -f "$tmp"
+  exit 1
+}
+id=$(printf '%s\n' "$ids" | head -1)
 if [ -n "$id" ]; then
   gh api -X PATCH "repos/$repo/issues/comments/$id" -F "body=@$tmp" >/dev/null
   echo "review comment updated (id $id) on PR #$pr"
