@@ -61,6 +61,48 @@ cd ~/src/agentkit && mise trust
 Below, `agentkit ...` is the release file; from a clone use `mise run kit:install ../my-repo ...` for install and
 `python3 ~/src/agentkit/tools/agentkit.py ...` for the rest.
 
+### What lands on your PATH, and what lands in the repo
+
+Installing the kit puts **nothing** on your PATH by itself, and the repo does not need the release file to work
+day to day. There are three entry points:
+
+| Entry point | Lives | Use it for |
+|---|---|---|
+| `agentkit` (the release file) | on your PATH, once per machine | `install`, and `update`: it carries the newer kit |
+| `mise run kit:status`, `kit:update`, `kit:reconcile`, `kit:check`, `kit:uninstall` | tasks in the repo | the same engine, inside the repo; they use `agentkit` if it is on your PATH, else the repo's own copy |
+| `python3 tools/agentkit.py ...` | inside the repo | status, check, reconcile, uninstall without mise. It cannot *update* from a release: there is no kit beside it |
+
+So in a repo, `mise run kit:update` is all you type, provided `agentkit` is on your PATH (or the repo was installed
+from a clone, whose path the lock remembers).
+
+### Getting all the commands in a repo (with or without its own mise)
+
+After `agentkit install`, the repo has `.config/mise/conf.d/agentkit.toml`. Run `mise trust` once and
+`mise tasks` lists them (about 40), whether or not the repo already has a `mise.toml`:
+
+- **The repo has its own `mise.toml`**: its tasks and `[tools]` stay as they are; the kit's tasks sit beside them
+  and **yours win a name clash**.
+- **The repo has no mise config at all**: the kit's file alone is enough for mise to list and run the tasks.
+- **mise is not installed**: every task is a plain command. The ones you use most:
+
+| mise task | Without mise |
+|---|---|
+| `mise run orient` / `next` | `python3 tools/orient.py` / `python3 tools/orient.py next` |
+| `mise run new "Title" --text "..."` | `python3 tools/items.py new-story Title --text "..."` |
+| `mise run branch US-001` | `python3 tools/items.py branch US-001` |
+| `mise run story US-001` (any stage) | `python3 tools/agentrun.py run story --id US-001 --apply` (`--dry-run` to preview) |
+| `mise run prepare` / `apply` | `python3 tools/agentrun.py prepare ...` / `apply ...` |
+| `mise run advance US-001 approved` | `python3 tools/items.py set-status US-001 approved` |
+| `mise run check` | `python3 tools/validate.py && python3 tools/trace_check.py && sh tools/projecttest.sh` |
+| `mise run review` | `sh tools/review.sh` |
+| `mise run ship` | `sh tools/ship.sh main` |
+| `mise run index` | `python3 tools/index.py` |
+
+**Pin the kit for the whole team** (the one place the installer never edits for you is your `mise.toml`, so this
+is yours to add): `mise use "github:bhoudebert/template-agent-dev@0.1.0"` records the version under `[tools]`,
+and `mise install` then gives every teammate the same `agentkit`. This relies on mise detecting the release
+asset; confirm it on your first release.
+
 ## 2. See what it would do
 
 ```sh
@@ -213,9 +255,10 @@ edited (add `--force` to remove edited files too).
 | `working tree has uncommitted changes` | commit or stash tracked changes first, then run again |
 | `could not commit ... Set your identity` | `git config user.name "You"; git config user.email you@example.com` |
 | `collision-kept` lines | you already had that file; yours was kept and is not managed. Rename it if you want the kit's. |
-| `no kit source here` on `update` | you ran the copy of `agentkit.py` inside your repo; run the `agentkit` release file (or pass `--from <clone or URL>`) |
+| `no kit source here` on `update` | nothing on your PATH carries a kit: put the `agentkit` release file on your PATH (then `mise run kit:update` works), or pass `--from <clone or URL>` |
 | `kit:*` tasks missing | `mise trust` (mise must trust the new task file) |
-| `mise: command not found` | install mise, or run the tools directly: `python3 tools/agentrun.py list` |
+| `mise: command not found` | install mise, or run the tools directly: see the table above |
+| `agentkit: command not found` | the release file is not on your PATH: `~/.local/bin` must be on it, or call it by full path |
 | `agentkit check` fails | unresolved conflict markers: `agentkit reconcile`, or edit the files |
 | A stage runs for minutes then `model returned no text` | a thinking model used its budget: `AGENT_REASONING_EFFORT=none` |
 | `doctor` says hooks not enabled | `mise run hooks` |

@@ -147,7 +147,7 @@ run = 'python3 tools/agentkit.py install --target "${usage_target}" ${usage_with
 
 [tasks."kit:status"]
 description = "Kit status in this repo: what is clean, what you edited, what the kit changed"
-run = "python3 tools/agentkit.py status"
+run = "sh tools/kit.sh status"
 
 [tasks."kit:update"]
 description = "Update the kit here on a new branch:  mise run kit:update [tools|agents|docs|ci|all] [--plan]"
@@ -155,7 +155,7 @@ usage = '''
 arg "[scope]" var=#true help="tools, agents, docs, ci or all (default: tools agents docs; ci only when asked)"
 flag "--plan" help="show what would change, write nothing"
 '''
-run = 'python3 tools/agentkit.py update ${usage_scope} $([ "${usage_plan}" = "true" ] && echo --plan)'
+run = 'sh tools/kit.sh update ${usage_scope} $([ "${usage_plan}" = "true" ] && echo --plan)'
 
 [tasks."kit:reconcile"]
 description = "Resolve kit update conflicts with a model (or --brief to write briefs for an assistant)"
@@ -163,18 +163,18 @@ usage = '''
 flag "--brief" help="write .agentkit/reconcile/*.md briefs instead of calling a model"
 flag "--plan" help="list the conflicted files"
 '''
-run = 'python3 tools/agentkit.py reconcile $([ "${usage_brief}" = "true" ] && echo --brief) $([ "${usage_plan}" = "true" ] && echo --plan)'
+run = 'sh tools/kit.sh reconcile $([ "${usage_brief}" = "true" ] && echo --brief) $([ "${usage_plan}" = "true" ] && echo --plan)'
 
 [tasks."kit:uninstall"]
 description = "Remove what the kit installed here (on a branch); --plan first"
 usage = '''
 flag "--plan" help="show what would be removed, write nothing"
 '''
-run = 'python3 tools/agentkit.py uninstall $([ "${usage_plan}" = "true" ] && echo --plan)'
+run = 'sh tools/kit.sh uninstall $([ "${usage_plan}" = "true" ] && echo --plan)'
 
 [tasks."kit:check"]
 description = "Fail if kit files in this repo still contain unresolved merge conflict markers"
-run = "python3 tools/agentkit.py check"
+run = "sh tools/kit.sh check"
 
 [tasks.status]
 description = "List stories, their status and the next stage"
