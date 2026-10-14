@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Build agentkit.pyz: one executable file holding the engine and the exact kit payload (stdlib only).
+"""Build `agentkit`: one executable file holding the engine and the exact kit payload (stdlib only).
 
-    python tools/build_pyz.py [--version 0.2.0] [--out dist/agentkit.pyz]
+    python tools/build_pyz.py [--version 0.2.0] [--out dist/agentkit]
 
 The payload is every file any feature of kit.json can install, so `agentkit install` / `update`
 need no network and a given release always installs the same files.
@@ -55,7 +55,7 @@ def build(version, out, root=ROOT):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--version")
-    ap.add_argument("--out", default="dist/agentkit.pyz")
+    ap.add_argument("--out", default="dist/agentkit")
     a = ap.parse_args(argv)
     version = a.version
     if not version:

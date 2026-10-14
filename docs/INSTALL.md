@@ -40,16 +40,23 @@ Your repository must be a git repository with a clean working tree (the installe
 ```sh
 mkdir -p ~/.local/bin
 curl -fsSL -o ~/.local/bin/agentkit \
-  https://github.com/bhoudebert/template-agent-dev/releases/latest/download/agentkit.pyz
+  https://github.com/bhoudebert/template-agent-dev/releases/latest/download/agentkit
 chmod +x ~/.local/bin/agentkit
 agentkit --help
 ```
 
-Or let mise manage it (confirm the asset is detected on your first release):
+Or let mise manage it (verified against the `v0.1.0` release):
 
 ```sh
 mise use -g "github:bhoudebert/template-agent-dev@latest"
 ```
+
+Two things can stop that, both from mise, not from the kit:
+
+| mise says | Why | Do |
+|---|---|---|
+| `no versions found ... matching date filter` | mise hides releases younger than its release-age cooldown (a supply-chain guard), so a **brand-new** release is invisible for a while | wait, or bypass once: `mise use -g --minimum-release-age 0 "github:bhoudebert/template-agent-dev@latest"`, or exempt it for good: `mise settings add minimum_release_age_excludes github:bhoudebert/template-agent-dev` |
+| `No matching asset found for platform ...` | the release has no `agentkit` asset (a release made before the asset was attached) | use the `curl` line above, or re-run the `release-pyz` workflow for that tag |
 
 **From a clone** (before the first release, or to contribute):
 
@@ -100,8 +107,7 @@ After `agentkit install`, the repo has `.config/mise/conf.d/agentkit.toml`. Run 
 
 **Pin the kit for the whole team** (the one place the installer never edits for you is your `mise.toml`, so this
 is yours to add): `mise use "github:bhoudebert/template-agent-dev@0.1.0"` records the version under `[tools]`,
-and `mise install` then gives every teammate the same `agentkit`. This relies on mise detecting the release
-asset; confirm it on your first release.
+and `mise install` then gives every teammate the same `agentkit` (subject to the release-age cooldown in step 1).
 
 ## 2. See what it would do
 
@@ -259,6 +265,7 @@ edited (add `--force` to remove edited files too).
 | `kit:*` tasks missing | `mise trust` (mise must trust the new task file) |
 | `mise: command not found` | install mise, or run the tools directly: see the table above |
 | `agentkit: command not found` | the release file is not on your PATH: `~/.local/bin` must be on it, or call it by full path |
+| `mise use github:...` finds no version, or no asset | see the table in step 1: the release-age cooldown, or a release without the asset |
 | `agentkit check` fails | unresolved conflict markers: `agentkit reconcile`, or edit the files |
 | A stage runs for minutes then `model returned no text` | a thinking model used its budget: `AGENT_REASONING_EFFORT=none` |
 | `doctor` says hooks not enabled | `mise run hooks` |

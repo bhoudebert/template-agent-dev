@@ -17,7 +17,7 @@ request -> story -> spec -> design -> implement -> test -> QA -> review -> relea
 
 ```sh
 curl -fsSL -o ~/.local/bin/agentkit \
-  https://github.com/bhoudebert/template-agent-dev/releases/latest/download/agentkit.pyz && chmod +x ~/.local/bin/agentkit
+  https://github.com/bhoudebert/template-agent-dev/releases/latest/download/agentkit && chmod +x ~/.local/bin/agentkit
 cd my-repo
 agentkit install --plan      # see what it would do
 agentkit install             # a branch and one commit; nothing is pushed; review it as a PR

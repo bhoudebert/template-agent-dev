@@ -1,6 +1,10 @@
 # Versioning: release-please keeps a "release PR" open on main (SemVer from Conventional Commits).
 # Merging it tags vX.Y.Z, updates CHANGELOG.md and creates the GitHub release.
 # Change `release-type` in release-please-config.json to match your stack (node, python, go, ...).
+#
+# This is the kit's own copy: right after a release is created it builds and attaches the `agentkit`
+# asset (see release-pyz.yml). The generic version that the kit installs elsewhere is in
+# adapters/github/workflows/release-please.yml and has no such job.
 name: release-please
 on:
   push:
@@ -11,8 +15,20 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
     steps:
-      - uses: googleapis/release-please-action@v4
+      - id: rp
+        uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+  asset:
+    needs: release-please
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-pyz.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}

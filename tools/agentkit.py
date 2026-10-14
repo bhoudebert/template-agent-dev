@@ -30,7 +30,7 @@ _PAYLOAD = []
 def running_kit_root():
     """Directory holding the kit this process belongs to.
 
-    From a clone: the repository root. From a release zipapp (`agentkit.pyz`): the embedded payload,
+    From a clone: the repository root. From a release zipapp (the `agentkit` file): the embedded payload,
     extracted once to a temp dir. In an adopting repo, tools/agentkit.py has no kit beside it: the
     returned directory then has no kit.json and the caller falls back to the lock's source."""
     here = Path(__file__).resolve()
