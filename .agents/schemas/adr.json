@@ -1,8 +1,31 @@
 {
   "frontmatter": {
-    "required": ["id", "type", "title", "status", "story", "date"],
-    "enums": {"status": ["proposed", "accepted", "superseded", "rejected"]},
-    "patterns": {"id": "^ADR-\\d{4}$", "story": "^US-\\d{3,}$"}
+    "required": [
+      "id",
+      "type",
+      "title",
+      "status",
+      "story",
+      "date"
+    ],
+    "enums": {
+      "status": [
+        "proposed",
+        "accepted",
+        "superseded",
+        "rejected"
+      ]
+    },
+    "patterns": {
+      "id": "^ADR-\\d{4}$",
+      "story": "^US-\\d{3,}$"
+    }
   },
-  "sections": ["Context", "Options considered", "Decision", "Consequences"]
+  "sections": [
+    "Context",
+    "Options considered",
+    "Decision",
+    "Consequences"
+  ],
+  "filename_starts_with": "id"
 }

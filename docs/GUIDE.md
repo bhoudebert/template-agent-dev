@@ -156,10 +156,15 @@ Implementation is iterative: `run implement` works the next unchecked tasks in `
 
 ### Review a PR
 ```sh
-export AGENT_BASE_REF=origin/main
-python3 tools/agentrun.py run review --id US-002 --apply
-cat .agents/out/review-US-002.md          # post as PR comment manually, or use the GitHub workflow
+mise run review            # the WHOLE PR: all its commits vs its base branch (+ uncommitted), printed
+mise run review --post     # same, and create/update THE review comment on the open PR
+mise run review --commit   # only the last commit (never posted)
 ```
+
+- **Scope**: the base is the PR's real base branch (read via `gh`), so a stacked PR is not reviewed together with its parent. Override with `AGENT_BASE_REF`.
+- **One comment**: `--post` and CI update a single marked comment in place; they never add a second one and never touch your own comments. A failing comment lookup is an error, not a new comment.
+- **Reviewing before you commit**: uncommitted changes to tracked files are included. New untracked files are not until you `git add` them.
+- **It is advice**: it can miss things and can report things that are not there. Verify before acting.
 
 ### Production incident
 ```sh
@@ -184,7 +189,17 @@ Output is a ranked hypothesis list and recommended actions. A human executes any
 adapters/install.sh github tools
 ```
 - Copies workflows to `.github/workflows/`: `ci.yml` (PR title check, validate, trace, tests), `release-please.yml`, `agent-review.yml` (comments on PRs), `agent-triage.yml` (label an issue `agent:enrich` -> PR with enriched story).
-- Add repo secret `AGENT_API_KEY` and variables `AGENT_BASE_URL`, `AGENT_MODEL_STRONG`, `AGENT_MODEL_CHEAP`.
+- Configure the model in **Settings > Secrets and variables > Actions**:
+
+  | Kind | Name | Example |
+  |---|---|---|
+  | Variable | `AGENT_BASE_URL` | `https://api.example.com/v1` |
+  | Variable | `AGENT_MODEL_STRONG`, `AGENT_MODEL_CHEAP` | your model ids |
+  | Secret | `AGENT_API_KEY` | token for that endpoint |
+  | Variable (optional) | `AGENT_REASONING_EFFORT`, `AGENT_MAX_TOKENS`, `AGENT_PROVIDER`, `AGENT_CMD` | `none`, `16000` |
+
+- **Not configured? The agent workflows skip** with a notice (they do not fail). The deterministic `ci` workflow is independent and always runs.
+- A GitHub-hosted runner cannot reach a model on your own machine (`localhost`). Use a hosted OpenAI-compatible API, or register a self-hosted runner on a machine that can reach your model and set `runs-on: self-hosted`.
 - Local models need a self-hosted runner that can reach them.
 - Name PR branches `feature/US-002-...` so the reviewer finds the story id.
 - These workflows are untested against a real repo. Try on a throwaway repo first; the triage workflow feeds issue text into a shell, review before enabling on public repos.
@@ -208,6 +223,9 @@ adapters/install.sh github tools
 
 | Symptom | Cause / fix |
 |---|---|
+| `validate`: `file name must be ...` | the file name must start with its `id` (or `story`): rename the file, e.g. `ADR-0003-use-queue.md`, `US-012.md`. Existing projects adopting the template: run `mise run validate` once and rename what it lists |
+| review comment not posted: `cannot list comments` | `gh` is not authenticated or lacks `pull-requests: write`. Nothing is posted on purpose (a failed lookup must not create duplicates) |
+| `agent-review` check shows "skipped" | no model configured for CI; set the repository variables (section 4) |
 | exit 3 `no model set` | export `AGENT_MODEL` (or `_STRONG/_CHEAP`) |
 | exit 3 `model returned no text` | a thinking model spent its whole budget reasoning (minutes, empty answer). Set `AGENT_REASONING_EFFORT=none` (or `low`) and `AGENT_MAX_TOKENS=16000`, or use a non-thinking model |
 | exit 3 `openai provider failed` | wrong `AGENT_BASE_URL`, server down, or timeout (`AGENT_TIMEOUT` seconds) |

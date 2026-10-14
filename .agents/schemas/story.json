@@ -34,5 +34,6 @@
   },
   "relaxed_when": {
     "status": "draft"
-  }
+  },
+  "filename_starts_with": "id"
 }

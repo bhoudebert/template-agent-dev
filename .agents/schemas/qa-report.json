@@ -1,8 +1,27 @@
 {
   "frontmatter": {
-    "required": ["type", "story", "verdict", "date"],
-    "enums": {"verdict": ["pass", "fail", "blocked"]},
-    "patterns": {"story": "^US-\\d{3,}$"}
+    "required": [
+      "type",
+      "story",
+      "verdict",
+      "date"
+    ],
+    "enums": {
+      "verdict": [
+        "pass",
+        "fail",
+        "blocked"
+      ]
+    },
+    "patterns": {
+      "story": "^US-\\d{3,}$"
+    }
   },
-  "sections": ["Summary", "Traceability", "Findings", "Not verified"]
+  "sections": [
+    "Summary",
+    "Traceability",
+    "Findings",
+    "Not verified"
+  ],
+  "filename_starts_with": "story"
 }

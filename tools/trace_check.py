@@ -12,25 +12,20 @@ import sys
 from pathlib import Path
 
 import miniyaml
+import repowalk
 
 ROOT = Path(__file__).resolve().parent.parent
 ORDER = ["draft", "enriched", "approved", "specified", "designed", "implemented", "done"]
-SKIP_DIRS = {".git", ".agents", "node_modules", ".venv", "tools", "tests", "evals", "adapters", "examples"}
 
 
 def _artifacts(root):
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for name in filenames:
-            if not name.endswith(".md"):
-                continue
-            path = Path(dirpath) / name
-            try:
-                meta, _ = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
-            except ValueError:
-                continue
-            if meta and meta.get("type"):
-                yield path, meta
+    for path in repowalk.iter_markdown(root):
+        try:
+            meta, _ = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
+        except ValueError:
+            continue
+        if meta and meta.get("type"):
+            yield path, meta
 
 
 def check(root=ROOT):

@@ -13,9 +13,9 @@ import sys
 from pathlib import Path
 
 import miniyaml
+import repowalk
 
 ROOT = Path(__file__).resolve().parent.parent
-SKIP_DIRS = {".git", ".agents", "node_modules", ".venv", "tools", "tests", "evals", "adapters", "examples"}
 CHANGE_SECTIONS = ("why", "what changes", "impact")
 SPEC_HEADERS = ("## added requirements", "## modified requirements", "## removed requirements", "## renamed requirements")
 
@@ -61,6 +61,12 @@ def check_file(path, root=ROOT):
     for key, pattern in fm.get("patterns", {}).items():
         if key in meta and not re.match(pattern, str(meta[key])):
             errs.append(f"{rel}: `{key}`={meta[key]!r} does not match {pattern}")
+    fname_key = schema.get("filename_starts_with")
+    if fname_key and meta.get(fname_key):
+        want = str(meta[fname_key])
+        name = Path(path).name
+        if name != f"{want}.md" and not name.startswith(f"{want}-"):
+            errs.append(f"{rel}: file name must be `{want}.md` or `{want}-<slug>.md` (frontmatter {fname_key}: {want})")
     relaxed = schema.get("relaxed_when", {})
     if relaxed and all(meta.get(k) == v for k, v in relaxed.items()):
         return errs  # e.g. raw draft story: only frontmatter is enforced
@@ -119,11 +125,8 @@ def check_change(change_dir, root=ROOT):
 
 def scan(root=ROOT):
     errs = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for name in filenames:
-            if name.endswith(".md"):
-                errs += check_file(Path(dirpath) / name, root)
+    for path in repowalk.iter_markdown(root):
+        errs += check_file(path, root)
     changes = Path(root) / "openspec" / "changes"
     if changes.is_dir():
         for d in sorted(changes.iterdir()):

@@ -52,12 +52,30 @@ def _read(path):
 
 
 def _diff(root):
+    """The diff the reviewer sees, with a `# scope:` header line.
+
+    AGENT_DIFF_COMMIT=<ref>  just that commit (message + patch)
+    otherwise                the branch against AGENT_BASE_REF (all its commits, merge-base diff;
+                             fallback HEAD~1) plus uncommitted tracked changes
+    AGENT_DIFF_SCOPE         human-readable scope label for the header
+    """
+    label = os.environ.get("AGENT_DIFF_SCOPE")
+    commit = os.environ.get("AGENT_DIFF_COMMIT")
+    if commit:
+        proc = subprocess.run(["git", "show", commit], cwd=root, text=True, capture_output=True)
+        body = proc.stdout if proc.returncode == 0 else ""
+        return f"# scope: {label or 'single commit ' + commit}\n{body}"
     base = os.environ.get("AGENT_BASE_REF", "origin/main")
+    parts = []
     for ref in (f"{base}...HEAD", "HEAD~1"):
         proc = subprocess.run(["git", "diff", ref], cwd=root, text=True, capture_output=True)
         if proc.returncode == 0 and proc.stdout.strip():
-            return proc.stdout
-    return ""
+            parts.append(proc.stdout)
+            break
+    work = subprocess.run(["git", "diff", "HEAD"], cwd=root, text=True, capture_output=True)
+    if work.returncode == 0 and work.stdout.strip():
+        parts.append("# --- uncommitted changes ---\n" + work.stdout)
+    return f"# scope: {label or 'branch vs ' + base}\n" + "\n".join(parts)
 
 
 def gather_inputs(stage, item_id, root=ROOT):

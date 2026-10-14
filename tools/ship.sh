@@ -16,4 +16,5 @@ git rev-parse --verify -q "$base" >/dev/null || git fetch -q origin "$base"
 python3 tools/check_attribution.py --range "$base..HEAD"
 git push -u origin HEAD
 # shellcheck disable=SC2086
-gh pr create --base "$base" --fill $draft
+# title = latest commit subject (--fill alone uses the branch name when there are several commits)
+gh pr create --base "$base" --fill --title "$(git log -1 --format=%s)" $draft
