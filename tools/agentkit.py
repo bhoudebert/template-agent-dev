@@ -279,7 +279,12 @@ def new_branch(target, name):
 
 def commit(target, paths, message):
     run(["git", "add", "-A", "--", *paths], cwd=target.root)
-    run(["git", "-c", "commit.gpgsign=false", "commit", "-q", "-m", message], cwd=target.root)
+    p = run(["git", "-c", "commit.gpgsign=false", "commit", "-q", "-m", message], cwd=target.root, check=False)
+    if p.returncode != 0:
+        err = (p.stderr or p.stdout).strip()
+        hint = ("\nSet your identity first: git config user.name \"Your Name\"; git config user.email you@example.com"
+                if "identity" in err.lower() or "user.name" in err.lower() or "user.email" in err.lower() else "")
+        raise SystemExit(f"could not commit the kit changes (they are staged on the branch): {err}{hint}")
 
 
 def cmd_install(args):

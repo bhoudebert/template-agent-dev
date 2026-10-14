@@ -30,6 +30,9 @@ def host_repo():
     (d / ".github/workflows/ci.yml").write_text(HOST_CI)
     (d / "package.json").write_text('{"name":"host"}\n')
     git(d, "init", "-q", "-b", "main")
+    # the engine commits with the repository's own identity, as a user's would
+    git(d, "config", "user.name", "Host Dev")
+    git(d, "config", "user.email", "dev@example.com")
     git(d, "add", "-A")
     git(d, "commit", "-q", "-m", "init")
     return d
@@ -124,6 +127,24 @@ class Install(unittest.TestCase):
         cli("install", "--target", d)
         with self.assertRaises(SystemExit):
             cli("install", "--target", d)
+
+
+class Identity(unittest.TestCase):
+    def test_missing_git_identity_gives_a_clear_message(self):
+        import os
+        d = Path(tempfile.mkdtemp())
+        (d / "a.txt").write_text("x")
+        subprocess.run(["git", "init", "-q", "-b", "main"], cwd=d, check=True)
+        env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+        env.update(HOME=str(d), GIT_CONFIG_GLOBAL="/dev/null", GIT_CONFIG_SYSTEM="/dev/null")
+        old = os.environ.copy()
+        os.environ.clear(); os.environ.update(env)
+        try:
+            with self.assertRaises(SystemExit) as ctx:
+                agentkit.commit(agentkit.Target(d), ["a.txt"], "chore: x")
+        finally:
+            os.environ.clear(); os.environ.update(old)
+        self.assertIn("git config user.name", str(ctx.exception))
 
 
 class Update(unittest.TestCase):
