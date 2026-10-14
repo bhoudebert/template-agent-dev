@@ -12,6 +12,7 @@ import re
 import sys
 from pathlib import Path
 
+import config
 import miniyaml
 import repowalk
 
@@ -92,19 +93,20 @@ def build(root=ROOT):
 
     out.append("## Changes in flight (OpenSpec)\n")
     rows = []
-    cdir = root / "openspec" / "changes"
+    cfg = config.load(root)
+    cdir = root / cfg.path("changes")
     if cdir.is_dir():
         for d in sorted(x for x in cdir.iterdir() if x.is_dir() and x.name != "archive"):
             why = ""
             prop = d / "proposal.md"
             if prop.exists():
                 why = _first_sentence(_sections(prop.read_text(encoding="utf-8")).get("why", ""))
-            rows.append([f"[{d.name}](openspec/changes/{d.name}/)", why])
+            rows.append([f"[{d.name}]({cfg.path('changes')}/{d.name}/)", why])
     out.append(_table(["Change", "Why"], rows))
 
     out.append("## Current specs (OpenSpec)\n")
     rows = []
-    sdir = root / "openspec" / "specs"
+    sdir = root / cfg.path("specs")
     if sdir.is_dir():
         for spec in sorted(sdir.glob("*/spec.md")):
             reqs = re.findall(r"^###\s+Requirement:\s*(.+)$", spec.read_text(encoding="utf-8"), re.M)

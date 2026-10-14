@@ -7,7 +7,7 @@
       "date"
     ],
     "patterns": {
-      "id": "^RB-\\d{3,}$"
+      "id": "^{runbook}$"
     }
   },
   "sections": [

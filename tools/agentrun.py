@@ -21,6 +21,7 @@ import sys
 import time
 from pathlib import Path
 
+import config
 import miniyaml
 import providers
 
@@ -37,7 +38,8 @@ def today():
 
 
 def load_pipeline(root=ROOT):
-    return miniyaml.loads((Path(root) / ".agents" / "pipeline.yaml").read_text(encoding="utf-8"))
+    text = (Path(root) / ".agents" / "pipeline.yaml").read_text(encoding="utf-8")
+    return miniyaml.loads(config.load(root).apply_paths(text))
 
 
 def find_stage(pipeline, name):
@@ -149,7 +151,7 @@ def build_prompt(stage, item_id, root=ROOT):
     if isinstance(templates, str):
         templates = [templates]
     if stage.get("name") == "story":  # a bug is a story with a bug-shaped template
-        sp = root / "docs" / "stories" / f"{item_id}.md"
+        sp = root / config.load(root).path("stories") / f"{item_id}.md"
         if sp.exists():
             m, _ = miniyaml.split_frontmatter(sp.read_text(encoding="utf-8"))
             if m and m.get("kind") == "bug":
@@ -212,15 +214,15 @@ def preserve_keys(old_text, new_text, keys=PRESERVED_STORY_KEYS):
     return new_text[: nm.end(1)] + "\n" + "\n".join(add) + new_text[nm.end(1):]
 
 
-def is_story_path(rel):
-    return fnmatch.fnmatch(rel, "docs/stories/*.md")
+def is_story_path(rel, root=ROOT):
+    return fnmatch.fnmatch(rel, f"{config.load(root).path('stories')}/*.md")
 
 
 def preflight(stage_name, item_id, root=ROOT):
     """Problems that make a stage pointless to run. [] when fine."""
     if stage_name == "story":
         import items
-        path = Path(root) / "docs" / "stories" / f"{item_id}.md"
+        path = Path(root) / config.load(root).path("stories") / f"{item_id}.md"
         if not path.exists():
             return [f"{path.relative_to(root)} does not exist: `mise run new <title>` first"]
         _, body = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
@@ -240,8 +242,10 @@ def run_checks(stage, written, root=ROOT):
     for name in stage.get("check") or []:
         if name == "validate":
             paths = [Path(root) / p for p in written]
-            dirs = {Path(root) / "openspec" / "changes" / Path(p).parts[2] for p in written
-                    if p.startswith("openspec/changes/") and len(Path(p).parts) > 2}
+            changes = config.load(root).path("changes")
+            n = len(Path(changes).parts)
+            dirs = {Path(root) / changes / Path(p).parts[n] for p in written
+                    if p.startswith(changes + "/") and len(Path(p).parts) > n}
             errs += validate.check_paths(paths + sorted(dirs), root)
         elif name == "trace":
             errs += trace_check.check(root)
@@ -294,7 +298,7 @@ def cmd_run(args, root=ROOT):
         for path, content in accepted.items():
             target = Path(root) / path
             target.parent.mkdir(parents=True, exist_ok=True)
-            if is_story_path(path) and target.exists():
+            if is_story_path(path, root) and target.exists():
                 content = preserve_keys(target.read_text(encoding="utf-8"), content)
             target.write_text(content, encoding="utf-8")
         errs = run_checks(stage, list(accepted), root)

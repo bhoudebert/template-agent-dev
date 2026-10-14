@@ -11,6 +11,7 @@ import os
 import sys
 from pathlib import Path
 
+import config
 import miniyaml
 import repowalk
 
@@ -49,10 +50,11 @@ def check(root=ROOT):
         rank = ORDER.index(status)
         skip = meta.get("skip") or []
         skip = skip if isinstance(skip, list) else [skip]
-        change = root / "openspec" / "changes" / str(sid)
-        archived = list((root / "openspec" / "changes" / "archive").glob(f"*{sid}*")) if (root / "openspec" / "changes" / "archive").is_dir() else []
+        changes_dir = root / config.load(root).path("changes")
+        change = changes_dir / str(sid)
+        archived = list((changes_dir / "archive").glob(f"*{sid}*")) if (changes_dir / "archive").is_dir() else []
         if rank >= ORDER.index("specified") and "spec" not in skip and not (change.is_dir() or archived):
-            errs.append(f"{sid}: status={status} but openspec/changes/{sid}/ missing")
+            errs.append(f"{sid}: status={status} but {config.load(root).path('changes')}/{sid}/ missing")
         if rank >= ORDER.index("designed") and "design" not in skip and not linked.get(sid):
             errs.append(f"{sid}: status={status} but no ADR/design references it")
         if status == "done":

@@ -13,6 +13,7 @@ import re
 import sys
 from pathlib import Path
 
+import config
 import miniyaml
 import trace_check
 
@@ -29,19 +30,36 @@ PLACEHOLDER = "Describe the request in your own words here."
 PLACEHOLDER_BUG = "Describe the symptom: what happens, what you expected, how to reproduce it."
 
 
-def _next_id(prefix, folder, root):
-    nums = [int(m.group(1)) for p in (Path(root) / folder).glob(f"{prefix}-*.md")
-            if (m := re.match(rf"{prefix}-(\d+)", p.name))]
-    return f"{prefix}-{max(nums, default=0) + 1:03d}"
+_FOLDER = {"story": "stories", "incident": "incidents"}
+
+
+def _dir(kind, root):
+    return Path(root) / config.load(root).path(_FOLDER[kind])
+
+
+def _next_id(kind, root):
+    cfg = config.load(root)
+    nums = [cfg.number_of(kind, p.stem) for p in _dir(kind, root).glob(f"{cfg.prefix(kind)}-*.md")
+            if cfg.is_kind(kind, p.stem)]
+    return cfg.format_id(kind, max(nums, default=0) + 1)
 
 
 def _clean(title):
     return re.sub(r"[:#\n]+", " ", title).strip()
 
 
-def new_story(title, root=ROOT, text="", kind="feature"):
-    sid = _next_id("US", "docs/stories", root)
-    path = Path(root) / "docs" / "stories" / f"{sid}.md"
+def new_story(title, root=ROOT, text="", kind="feature", explicit_id=None):
+    cfg = config.load(root)
+    if explicit_id:   # adopt an external key (a Jira issue, for example) instead of our counter
+        if not cfg.is_kind("story", explicit_id):
+            raise SystemExit(f"{explicit_id!r} does not match the story id format "
+                             f"(prefix {cfg.prefix('story')!r}, or ids.story_pattern in .agents/pipeline.yaml)")
+        sid = explicit_id
+        if (_dir("story", root) / f"{sid}.md").exists():
+            raise SystemExit(f"{sid} already exists")
+    else:
+        sid = _next_id("story", root)
+    path = _dir("story", root) / f"{sid}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     kind_line = "kind: bug\n" if kind == "bug" else ""
     default = PLACEHOLDER_BUG if kind == "bug" else PLACEHOLDER
@@ -52,7 +70,7 @@ def new_story(title, root=ROOT, text="", kind="feature"):
 
 
 def new_incident(title, root=ROOT):
-    iid = _next_id("INC", "docs/incidents", root)
+    iid = _next_id("incident", root)
     tpl = (Path(root) / ".agents" / "templates" / "incident.md").read_text(encoding="utf-8")
     body = tpl.replace("INC-000", iid).replace("Incident title", _clean(title))
     body = body.replace("Quoted log lines, metrics, traces, recent deploys (with source and timestamp).",
@@ -62,7 +80,7 @@ def new_incident(title, root=ROOT):
     body = re.sub(r"(## Hypotheses\n).*?(## Recommended actions)", r"\1TBD\n\n\2", body, flags=re.S)
     body = re.sub(r"(## Recommended actions\n).*?(## Not verified)", r"\1TBD\n\n\2", body, flags=re.S)
     body = re.sub(r"(## Not verified\n).*\Z", r"\1TBD\n", body, flags=re.S)
-    path = Path(root) / "docs" / "incidents" / f"{iid}.md"
+    path = _dir("incident", root) / f"{iid}.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body, encoding="utf-8")
     return iid, path
@@ -70,7 +88,10 @@ def new_incident(title, root=ROOT):
 
 def stories(root=ROOT):
     out = []
-    for p in sorted((Path(root) / "docs" / "stories").glob("US-*.md")):
+    cfg = config.load(root)
+    for p in sorted(_dir("story", root).glob("*.md")):
+        if not cfg.is_kind("story", p.stem):
+            continue
         meta, _ = miniyaml.split_frontmatter(p.read_text(encoding="utf-8"))
         if meta:
             out.append((meta.get("id", p.stem), meta.get("status", "?"), meta.get("title", ""), p))
@@ -78,7 +99,7 @@ def stories(root=ROOT):
 
 
 def set_status(sid, new, force=False, root=ROOT):
-    path = Path(root) / "docs" / "stories" / f"{sid}.md"
+    path = _dir("story", root) / f"{sid}.md"
     if not path.exists():
         raise SystemExit(f"no such story: {path}")
     if new not in ORDER:
@@ -106,7 +127,7 @@ def set_status(sid, new, force=False, root=ROOT):
 
 def set_skip(sid, stages, reason, root=ROOT):
     """Declare that a story needs no spec / design / tests-evidence (or clear it with an empty list)."""
-    path = Path(root) / "docs" / "stories" / f"{sid}.md"
+    path = _dir("story", root) / f"{sid}.md"
     if not path.exists():
         raise SystemExit(f"no such story: {path}")
     bad = [s for s in stages if s not in ("spec", "design", "tests")]
@@ -129,8 +150,9 @@ def set_skip(sid, stages, reason, root=ROOT):
 
 def branch_name(item_id, root=ROOT):
     """feature/<US-id>-<slug> from the story title; fix/<INC-id>-<slug> for incidents."""
-    folder, prefix = ("stories", "feature") if item_id.startswith("US-") else ("incidents", "fix")
-    path = Path(root) / "docs" / folder / f"{item_id}.md"
+    kind = "incident" if config.load(root).is_kind("incident", item_id) else "story"
+    prefix = "fix" if kind == "incident" else "feature"
+    path = _dir(kind, root) / f"{item_id}.md"
     if not path.exists():
         raise SystemExit(f"no such item: {path}")
     meta, _ = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
@@ -145,6 +167,7 @@ def main(argv=None):
     ns.add_argument("title", nargs="+")
     ns.add_argument("--text", default="", help="the request in your own words (else edit the file)")
     ns.add_argument("--bug", action="store_true", help="a bug-shaped story: symptom, expected, reproduction")
+    ns.add_argument("--id", dest="explicit_id", help="adopt this id (e.g. a Jira key) instead of the next number")
     sub.add_parser("new-incident").add_argument("title", nargs="+")
     sub.add_parser("list")
     sub.add_parser("branch").add_argument("id")
@@ -158,7 +181,8 @@ def main(argv=None):
     s.add_argument("--force", action="store_true")
     a = ap.parse_args(argv)
     if a.cmd == "new-story":
-        sid, path = new_story(" ".join(a.title), text=a.text, kind="bug" if a.bug else "feature")
+        sid, path = new_story(" ".join(a.title), text=a.text, kind="bug" if a.bug else "feature",
+                            explicit_id=a.explicit_id)
         rel = os.path.relpath(path, ROOT)
         if a.text:
             print(f"created {rel} with your request\nnext: `mise run branch {sid}`, then `mise run story {sid}`")

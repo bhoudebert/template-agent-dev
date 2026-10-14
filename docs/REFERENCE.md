@@ -8,7 +8,7 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 
 | Task | Arguments | Effect |
 |---|---|---|
-| `new` | `<title...> [--text "<request>"] [--bug]` | Create the next `docs/stories/US-NNN.md` as a raw draft; `--text` fills in the request, otherwise edit the file; `--bug` makes it a bug-shaped story (`kind: bug`) |
+| `new` | `<title...> [--text "<request>"] [--bug] [--id <key>]` | Create the next `docs/stories/US-NNN.md` as a raw draft; `--text` fills in the request, otherwise edit the file; `--bug` makes it a bug-shaped story (`kind: bug`) |
 | `incident` | `<title...>` | Create the next `docs/incidents/INC-NNN.md` from the template |
 | `hooks` | | Enable `.githooks`: commit-msg blocks assistant names, pre-push refuses a push to `main` |
 | `ship` | `[--draft] [--base <branch>] [--emergency]` | Checks, push, open PR; refuses on `main`. `--emergency` skips validate, trace, tests and evidence, never the branch/PR rule or the attribution check |
@@ -121,6 +121,30 @@ stages:
 | `review` | reviewer | `.agents/out/review-{id}.md` | human:merge | strong |
 | `release` | release | `docs/releases/{id}.md` | human:release-manager | cheap |
 | `diagnose` | sre | `docs/incidents/{id}.md`, `docs/runbooks/*.md` | human:on-call | strong |
+
+## Naming and layout (`ids:` and `paths:` in `.agents/pipeline.yaml`)
+
+Both are optional; the defaults are the stock layout. Everything reads them: `new`, `branch`, `orient`, the
+validators, the evidence floor, the index, the pipeline's `in`/`out` globs and the CI branch matching.
+
+```yaml
+ids:
+  story: PROJ                      # PROJ-1234; a tracker key works as is. Any number of digits.
+  # story_pattern: "[A-Z][A-Z0-9]+-[0-9]+"   # or any regex instead (keep it POSIX-friendly: shell scripts use it)
+  incident: INC
+  adr: ADR
+  runbook: RB
+paths:                              # stories architecture decisions qa incidents runbooks releases specs changes
+  stories: specs/stories
+  decisions: docs/adr
+```
+
+| Command | Effect |
+|---|---|
+| `mise run new "..." --id PROJ-4821` | create the story with an existing tracker key instead of the next number (the file is `PROJ-4821.md`) |
+| `python3 tools/config.py regex story` / `path stories` / `format story 12` | what the shell scripts and CI call |
+
+Changing the prefix does not rename existing files: rename them (and their `id:` / `story:` fields) in the same PR.
 
 ## Identifiers and files
 

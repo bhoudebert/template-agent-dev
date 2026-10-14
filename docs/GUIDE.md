@@ -267,6 +267,12 @@ assistant:  mise run orient            # rules + state
 
 Not every story needs a spec, a design or an ADR: `mise run skip US-003 spec,design --reason "copy fix"`. A skipped spec still needs evidence: a changed test (a non-regression test counts) or a spec; `skip: [tests]` waives it for docs/config only.
 
+## Using your tracker's keys and your own folders
+
+Set `ids.story: PROJ` (or a `story_pattern`) and `paths:` at the top of `.agents/pipeline.yaml`; see the reference
+page. `mise run new "Export invoices" --id PROJ-4821` adopts an existing Jira key, so the tracker stays the source of
+the number and there is no second counter.
+
 ## Bugs and emergencies in one minute
 
 - **A bug that can wait** is a story: `mise run new "Totals ignore VAT" --bug --text "..."`, then the usual flow. If the spec was already right: `mise run skip US-NNN spec,design --reason "spec already correct"`; you still add a non-regression test.

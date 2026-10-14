@@ -62,7 +62,8 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          ids=$(printf '%s %s' "$HEAD_REF" "$PR_TITLE" | grep -oE 'US-[0-9]+' | sort -u || true)
+          re=$(python3 tools/config.py regex story)
+          ids=$(printf '%s %s' "$HEAD_REF" "$PR_TITLE" | grep -oE "$re" | sort -u || true)
           id=$(printf '%s\n' "$ids" | head -1)
           if [ "$(printf '%s\n' "$ids" | grep -c .)" -gt 1 ]; then
             echo "::warning title=Several stories in one PR::$(echo $ids | tr '\n' ' ') referenced; reviewing against $id. Convention: one PR per story."
