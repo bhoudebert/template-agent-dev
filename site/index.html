@@ -29,6 +29,7 @@
       <a href="#review">Review</a>
       <a href="#git">Git</a>
       <a href="#safety">Safety</a>
+      <a href="docs/install.html">Install</a>
       <a href="docs/tutorial.html">Tutorial</a>
       <a href="docs/workflow.html">Docs</a>
       <a class="btn primary" href="#quick">Quick start</a>
@@ -47,14 +48,14 @@
       <p class="hero-note">Vendor-neutral. Any model: local, hosted or a CLI you already use.</p>
       <p class="hero-lede">From a rough request to a tagged release and a production incident, one role-agent per step. Everything is a file in git, every step ends with a person deciding, and nothing reaches <code>main</code> except through a pull request.</p>
       <div class="cta">
-        <a class="btn primary" href="docs/tutorial.html">Follow the tutorial <span aria-hidden="true">&rarr;</span></a>
-        <a class="btn" href="#loop">See whose turn it is</a>
+        <a class="btn primary" href="docs/install.html">Install it <span aria-hidden="true">&rarr;</span></a>
+        <a class="btn" href="docs/tutorial.html">Follow the tutorial</a>
       </div>
       <div class="install">
-        <code id="cmd">git clone https://github.com/bhoudebert/template-agent-dev &amp;&amp; cd template-agent-dev &amp;&amp; mise run doctor</code>
+        <code id="cmd">curl -fsSL -o ~/.local/bin/agentkit https://github.com/bhoudebert/template-agent-dev/releases/latest/download/agentkit.pyz &amp;&amp; chmod +x ~/.local/bin/agentkit</code>
         <button type="button" class="copy" data-copy-id="cmd" aria-label="Copy the install command">Copy</button>
       </div>
-      <p class="hero-foot">Needs <a href="https://mise.jdx.dev">mise</a>, git and Python 3.10+. No packages to install.</p>
+      <p class="hero-foot">Then <code>agentkit install --plan</code> in your repo. Needs git and Python 3.10+; <a href="https://mise.jdx.dev">mise</a> for the short commands. <a href="docs/install.html">Full install guide</a>.</p>
     </div>
 
     <div class="workbench" id="wb">
@@ -105,7 +106,7 @@ WRITE openspec/changes/US-001/specs/api/spec.md
 
 <div class="strip"><div class="wrap">
   <span>Local models welcome</span>
-  <span>Nine role-agents, one per stage</span>
+  <span>Nine stages, one role-agent each</span>
   <span>Standard-library Python, no dependencies</span>
   <span>Humans at every gate</span>
 </div></div>
@@ -150,7 +151,7 @@ WRITE openspec/changes/US-001/specs/api/spec.md
     <h2>Three layers. Only the thin one knows your vendor.</h2>
     <p class="lede">Roles, rules and artifacts are plain Markdown. The runner is a small script with no dependencies. Anything specific to a CI host or an AI product sits in a replaceable adapter.</p>
     <div class="cols c3">
-      <div class="card"><h3>1 &middot; Content</h3><p><code>AGENTS.md</code>, <code>CONTEXT.md</code>, nine roles, skills, policies, templates, schemas and <code>pipeline.yaml</code>. Portable between any model or tool.</p></div>
+      <div class="card"><h3>1 &middot; Content</h3><p><code>AGENTS.md</code>, <code>CONTEXT.md</code>, ten roles, skills, policies, templates, schemas and <code>pipeline.yaml</code>. Portable between any model or tool.</p></div>
       <div class="card"><h3>2 &middot; Core</h3><p><code>tools/agentrun.py</code> builds the prompt, calls a model, keeps only allowed files, runs checks. <code>validate</code> and <code>trace_check</code> are plain scripts.</p></div>
       <div class="card"><h3>3 &middot; Adapters</h3><p>GitHub workflows, <code>mise</code> tasks, pointers for Claude Code, Copilot and Cursor. Swap them without touching layers 1 and 2.</p></div>
     </div>
@@ -503,8 +504,8 @@ AGENT_CMD="claude -p"
     <h2>Five minutes to a first stage.</h2>
     <div class="cols c2">
       <div>
-        <div class="cmd"><code>mise trust &amp;&amp; cp .env.example .env</code><button class="copy" type="button" data-copy>Copy</button></div>
-        <p style="color:var(--muted);margin:6px 0 16px">Set <code>AGENT_MODEL</code> in <code>.env</code>.</p>
+        <div class="cmd"><code>agentkit install --plan &amp;&amp; agentkit install</code><button class="copy" type="button" data-copy>Copy</button></div>
+        <p style="color:var(--muted);margin:6px 0 16px">A branch and one commit in your repo; nothing is pushed. Then <code>mise trust</code>, and set <code>AGENT_MODEL</code> in <code>.env</code>.</p>
         <div class="cmd"><code>mise run doctor</code><button class="copy" type="button" data-copy>Copy</button></div>
         <p style="color:var(--muted);margin:6px 0 16px">Python, git, endpoint, model served.</p>
         <div class="cmd"><code>mise run new "Export invoices as CSV"</code><button class="copy" type="button" data-copy>Copy</button></div>
@@ -532,6 +533,7 @@ AGENT_CMD="claude -p"
     <span class="kicker">Documentation</span>
     <h2>Read more.</h2>
     <div class="cols c3">
+      <a class="card" href="docs/install.html" style="text-decoration:none;color:inherit"><h3>Install</h3><p>Add it to your repo on a branch, update it as a PR, resolve conflicts, remove it.</p></a>
       <a class="card" href="docs/tutorial.html" style="text-decoration:none;color:inherit"><h3>Tutorial</h3><p>One Node.js story from request to release, with every manual and automated step, run for real.</p></a>
       <a class="card" href="docs/workflow.html" style="text-decoration:none;color:inherit"><h3>Workflow</h3><p>Who does what, when. Stage cards, RACI, definition of done.</p></a>
       <a class="card" href="docs/guide.html" style="text-decoration:none;color:inherit"><h3>Guide</h3><p>Setup, providers, a walkthrough, troubleshooting.</p></a>

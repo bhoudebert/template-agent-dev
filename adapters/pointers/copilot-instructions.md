@@ -1,0 +1,1 @@
+Before doing any work in this repository, read and follow AGENTS.md at the repository root.

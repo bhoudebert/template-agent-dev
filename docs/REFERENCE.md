@@ -29,6 +29,8 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `kit:status` | | In an adopting repo: clean / you edited / kit changed / both |
 | `kit:update` | `[tools\|agents\|docs\|ci\|all] [--plan]` | Update the kit on a new branch; `ci` only when asked |
 | `kit:check` | | Fail on unresolved conflict markers in kit files |
+| `kit:reconcile` | `[--brief] [--plan]` | A model (or `--brief`: your assistant) resolves update conflicts |
+| `kit:uninstall` | `[--plan]` | Remove what the kit installed, on a branch |
 | `evidence` | | Evidence floor: from `implemented` on, the branch must change a spec or a test, or waive `tests` |
 | `check` | | `validate` + `trace` + `test` |
 | `test` | | The **project's** tests: auto-detects `npm test`, pytest, `go test`, `cargo test`, `mvn test` (`tools/projecttest.sh`) |
@@ -242,6 +244,7 @@ Scanned: every `*.md` except `.agents`, `tools`, `tests`, `evals`, `adapters`, `
 | reviewer | Find real problems in the diff |
 | release | Notes, predicted bump, go/no-go |
 | sre | Ranked hypotheses from evidence |
+| integrator | Merge a kit update into a customized file without losing either side (used by `agentkit reconcile`, not a pipeline stage) |
 
 ## Policies (applied to every stage)
 

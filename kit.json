@@ -17,6 +17,10 @@
     "release": {
       "default": false,
       "doc": "release-please workflow, config and manifest (the config and manifest are seeds)"
+    },
+    "pointers": {
+      "default": false,
+      "doc": "CLAUDE.md (imports AGENTS.md), .github/copilot-instructions.md and a Cursor rule, so assistants load AGENTS.md"
     }
   },
   "entries": [
@@ -112,7 +116,7 @@
       "feature": "core",
       "scope": "agents",
       "class": "block",
-      "match": ".gitignore",
+      "match": "adapters/host.gitignore",
       "dst": ".gitignore"
     },
     {
@@ -216,6 +220,27 @@
       "class": "seed",
       "match": ".release-please-manifest.json",
       "dst": "{path}"
+    },
+    {
+      "feature": "pointers",
+      "scope": "agents",
+      "class": "block",
+      "match": "adapters/pointers/CLAUDE.md",
+      "dst": "CLAUDE.md"
+    },
+    {
+      "feature": "pointers",
+      "scope": "agents",
+      "class": "block",
+      "match": "adapters/pointers/copilot-instructions.md",
+      "dst": ".github/copilot-instructions.md"
+    },
+    {
+      "feature": "pointers",
+      "scope": "agents",
+      "class": "managed",
+      "match": "adapters/pointers/cursor-agentkit.mdc",
+      "dst": ".cursor/rules/agentkit.mdc"
     }
   ]
 }

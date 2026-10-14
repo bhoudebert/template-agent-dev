@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """agentkit: install and update this workflow kit in another repository (stdlib only, needs git).
 
-    agentkit.py install [--target DIR] [--from SRC] [--with ci,docs,release] [--plan]
+    agentkit.py install [--target DIR] [--from SRC] [--with ci,docs,release,pointers] [--plan]
     agentkit.py status  [--target DIR]
     agentkit.py update  [scope ...] [--target DIR] [--from SRC] [--plan]   scopes: tools agents docs ci all
     agentkit.py check   [--target DIR]                                      unresolved conflict markers
+    agentkit.py uninstall [--target DIR] [--plan] [--force]                 remove what the kit installed
 
 Every write happens on a branch with one commit and nothing is pushed: you review the diff as a PR.
 File classes (see kit.json): managed, tailorable (3-way merged), block (region inside a shared file),
@@ -349,6 +350,17 @@ def cmd_install(args):
         print(f"agentkit {kit.version()} -> {target.root}  features: core{''.join(',' + f for f in features)}")
         for dst, act, _ in actions:
             print(f"  {act:<15} {dst}")
+        # The kit's tools import each other by module name from tools/. A file of yours with the same
+        # name would be used in their place, so a collision there cannot be "kept" silently.
+        blocking = [d for d, a, e in actions if a == "collision-kept" and d.startswith("tools/") and d.endswith(".py")]
+        if blocking and not args.allow_collisions:
+            print("\nBLOCKING: these files of yours would shadow kit modules that other kit tools import by name:\n  "
+                  + "\n  ".join(blocking)
+                  + "\nRename them (or move them out of tools/) and run install again; "
+                    "--allow-collisions installs anyway and keeps yours (the kit's tools may then fail).")
+            if args.plan:
+                return 1
+            raise SystemExit(1)
         if args.plan:
             return 0
         dirty = target.dirty_tracked()
@@ -638,7 +650,7 @@ def cmd_reconcile(args):
         outdir = target.path(".agentkit/reconcile")
         outdir.mkdir(parents=True, exist_ok=True)
         for dst, (cls, _, inner) in briefs.items():
-            name = dst.replace("/", "__") + ".md"
+            name = dst.lstrip(".").replace("/", "__") + ".brief.md"
             (outdir / name).write_text(
                 f"# Reconcile `{dst}` ({cls})\n\nFollow `.agents/roles/integrator.md`. Resolve the markers below, "
                 f"edit `{dst}` in place (for a block: only inside agentkit:begin/end), then run `mise run kit:check`.\n\n"
@@ -690,6 +702,67 @@ def cmd_reconcile(args):
     return 1 if failed else 0
 
 
+def cmd_uninstall(args):
+    target = Target(args.target)
+    lock = target.lock()
+    if not lock:
+        raise SystemExit("agentkit is not installed here")
+    plan = []   # (dst, action)
+    for dst, rec in sorted(lock["files"].items()):
+        p = target.path(dst)
+        cls = rec["class"]
+        if not p.exists():
+            plan.append((dst, "already-gone"))
+            continue
+        local = target.local_sha(dst, cls)
+        if local == rec["sha"] or args.force:
+            plan.append((dst, "remove-block" if cls == "block" else "remove"))
+        else:
+            plan.append((dst, "kept-edited"))
+    print(f"agentkit uninstall {lock['version']} -> {target.root}")
+    for dst, act in plan:
+        print(f"  {act:<14} {dst}")
+    print("  (seeds you own, such as CONTEXT.md and the docs folders, are never removed)")
+    if args.plan:
+        return 0
+    if target.dirty_tracked() and not args.no_branch:
+        raise SystemExit("working tree has uncommitted changes to tracked files; commit or stash first")
+    branch = None
+    if not args.no_branch:
+        _, branch = new_branch(target, "chore/agentkit-uninstall")
+    touched = [".agentkit"]
+    for dst, act in plan:
+        p = target.path(dst)
+        if act == "remove":
+            p.unlink()
+            touched.append(dst)
+        elif act == "remove-block":
+            text = p.read_text(encoding="utf-8")
+            begin, end = markers(dst)
+            i = text.find(begin)
+            j = text.find(end, i) if i >= 0 else -1
+            if i >= 0 and j >= 0:
+                rest = (text[:i].rstrip("\n") + "\n" + text[j + len(end):].lstrip("\n")).strip("\n")
+                if rest.strip():
+                    p.write_text(rest + "\n", encoding="utf-8")
+                else:
+                    p.unlink()
+                touched.append(dst)
+        if act in ("remove", "remove-block", "already-gone"):
+            d = p.parent
+            while d != target.root and d.exists() and not any(d.iterdir()):   # prune folders the kit emptied
+                d.rmdir()
+                d = d.parent
+    shutil.rmtree(target.path(".agentkit"), ignore_errors=True)
+    if not args.no_commit:
+        commit(target, touched, f"chore(agentkit): uninstall {lock['version']}")
+    print(f"\nuninstalled on branch {branch or '(current)'}; review the diff.")
+    kept = [d for d, a in plan if a == "kept-edited"]
+    if kept:
+        print("kept because you edited them (use --force to remove):\n  " + "\n  ".join(kept))
+    return 0
+
+
 def cmd_check(args):
     target = Target(args.target)
     lock = target.lock()
@@ -718,7 +791,9 @@ def main(argv=None):
 
     i = sub.add_parser("install")
     common(i)
-    i.add_argument("--with", dest="with_", default="", help="features: ci,docs,release")
+    i.add_argument("--with", dest="with_", default="", help="features: ci,docs,release,pointers")
+    i.add_argument("--allow-collisions", action="store_true",
+                   help="install even if a file of yours in tools/ shares a name with a kit module")
     i.set_defaults(fn=cmd_install)
     s = sub.add_parser("status")
     common(s)
@@ -726,7 +801,7 @@ def main(argv=None):
     u = sub.add_parser("update")
     common(u)
     u.add_argument("scopes", nargs="*", help="tools agents docs ci all (default: tools agents docs)")
-    u.add_argument("--with", dest="with_", default="", help="add features: ci,docs,release")
+    u.add_argument("--with", dest="with_", default="", help="add features: ci,docs,release,pointers")
     u.set_defaults(fn=cmd_update)
     r = sub.add_parser("reconcile", help="resolve update conflicts with a model (or write briefs for an assistant)")
     r.add_argument("--target", default=".")
@@ -735,6 +810,13 @@ def main(argv=None):
     r.add_argument("--plan", action="store_true")
     r.add_argument("--no-commit", action="store_true")
     r.set_defaults(fn=cmd_reconcile)
+    x = sub.add_parser("uninstall", help="remove what the kit installed (on a branch); your seeds and edits are kept")
+    x.add_argument("--target", default=".")
+    x.add_argument("--plan", action="store_true")
+    x.add_argument("--force", action="store_true", help="also remove files you edited")
+    x.add_argument("--no-branch", action="store_true")
+    x.add_argument("--no-commit", action="store_true")
+    x.set_defaults(fn=cmd_uninstall)
     c = sub.add_parser("check")
     c.add_argument("--target", default=".")
     c.set_defaults(fn=cmd_check)

@@ -137,10 +137,10 @@ description = "Does this branch leave evidence (a spec or test change) for its s
 run = "python3 tools/evidence.py"
 
 [tasks."kit:install"]
-description = "Install this kit into another repo:  mise run kit:install ../my-repo [--with ci,docs,release] [--plan]"
+description = "Install this kit into another repo:  mise run kit:install ../my-repo [--with ci,docs,release,pointers] [--plan]"
 usage = '''
 arg "<target>" help="path of the repository to install into"
-flag "--with <features>" help="optional features: ci, docs, release (core is always installed)"
+flag "--with <features>" help="optional features: ci, docs, release, pointers (core is always installed)"
 flag "--plan" help="show what would change, write nothing"
 '''
 run = 'python3 tools/agentkit.py install --target "${usage_target}" ${usage_with:+--with "$usage_with"} $([ "${usage_plan}" = "true" ] && echo --plan)'
@@ -164,6 +164,13 @@ flag "--brief" help="write .agentkit/reconcile/*.md briefs instead of calling a 
 flag "--plan" help="list the conflicted files"
 '''
 run = 'python3 tools/agentkit.py reconcile $([ "${usage_brief}" = "true" ] && echo --brief) $([ "${usage_plan}" = "true" ] && echo --plan)'
+
+[tasks."kit:uninstall"]
+description = "Remove what the kit installed here (on a branch); --plan first"
+usage = '''
+flag "--plan" help="show what would be removed, write nothing"
+'''
+run = 'python3 tools/agentkit.py uninstall $([ "${usage_plan}" = "true" ] && echo --plan)'
 
 [tasks."kit:check"]
 description = "Fail if kit files in this repo still contain unresolved merge conflict markers"

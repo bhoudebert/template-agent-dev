@@ -1,0 +1,7 @@
+# agent workflow runtime files and local secrets
+.agents/runs/
+.agents/out/
+.agentkit/reconcile/
+.env
+__pycache__/
+*.pyc
