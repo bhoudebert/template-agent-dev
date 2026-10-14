@@ -1,0 +1,7 @@
+{
+  "frontmatter": {
+    "required": ["id", "type", "title", "date"],
+    "patterns": {"id": "^RB-\\d{3,}$"}
+  },
+  "sections": ["When to use", "Symptoms", "Steps", "Verification", "Rollback"]
+}

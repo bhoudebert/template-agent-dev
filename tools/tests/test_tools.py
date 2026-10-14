@@ -58,6 +58,34 @@ class Validate(unittest.TestCase):
         self.assertEqual(validate.scan(ROOT), [])
         self.assertEqual(trace_check.check(ROOT), [])
 
+    def test_every_template_satisfies_its_schema(self):
+        tmp = sandbox()
+        for tpl in sorted((ROOT / ".agents" / "templates").glob("*.md")):
+            target = tmp / "docs" / "tmp" / tpl.name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(tpl.read_text())
+            self.assertEqual(validate.check_file(target, tmp), [], tpl.name)
+
+    def test_every_stage_references_existing_parts(self):
+        stages = agentrun.load_pipeline(ROOT)["stages"]
+        for st in stages:
+            self.assertTrue((ROOT / ".agents/roles" / f"{st['role']}.md").exists(), st["name"])
+            for s in st.get("skills") or []:
+                self.assertTrue((ROOT / ".agents/skills" / f"{s}.md").exists(), s)
+            t = st.get("template") or []
+            for name in [t] if isinstance(t, str) else t:
+                self.assertTrue((ROOT / ".agents/templates" / f"{name}.md").exists(), name)
+
+    def test_qa_report_must_cite_existing_files(self):
+        tmp = sandbox()
+        p = tmp / "docs" / "qa" / "US-001.md"
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text("---\ntype: qa-report\nstory: US-001\nverdict: pass\ndate: 2026-01-01\n---\n"
+                     "## Summary\nok\n## Traceability\n| a | `tests/ghost.test.js` | pass |\n## Findings\nnone\n## Not verified\nNothing\n")
+        self.assertTrue(any("tests/ghost.test.js" in e for e in validate.check_file(p, tmp)))
+        (tmp / "tests" / "ghost.test.js").write_text("// x")
+        self.assertEqual(validate.check_file(p, tmp), [])
+
     def test_worked_example_is_valid(self):
         tmp = sandbox()
         self.assertEqual(validate.scan(tmp), [])
@@ -180,6 +208,13 @@ class Runner(unittest.TestCase):
         ok, bad = agentrun.parse_files(self.RESP, ["docs/qa/US-001.md"])
         self.assertEqual(list(ok), ["docs/qa/US-001.md"])
         self.assertEqual(sorted(bad), ["../evil.txt", "src/app.py"])
+
+    def test_single_output_path_accepts_plain_reply(self):
+        got = agentrun.single_target_fallback("## Review\nLooks fine", [".agents/out/review-US-001.md"])
+        self.assertEqual(got, {".agents/out/review-US-001.md": "## Review\nLooks fine\n"})
+        self.assertEqual(agentrun.single_target_fallback("x", ["docs/**", "tests/**"]), {})
+        self.assertEqual(agentrun.single_target_fallback("x", ["docs/a.md", "docs/b.md"]), {})
+        self.assertEqual(agentrun.single_target_fallback("  ", ["docs/a.md"]), {})
 
     def test_prompt_wraps_inputs_and_contract(self):
         tmp = sandbox()

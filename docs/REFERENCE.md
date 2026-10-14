@@ -115,6 +115,8 @@ stages:
 | `design` | id, type, title, status, story | Overview, Components, Data and interfaces, Risks, Test strategy |
 | `qa-report` | type, story, verdict, date | Summary, Traceability, Findings, Not verified |
 | `incident` | id, type, title, severity, status | Impact, Evidence, Hypotheses, Recommended actions, Not verified |
+| `runbook` | id (`RB-NNN`), type, title, date | When to use, Symptoms, Steps, Verification, Rollback |
+| `release-notes` | type, story, date, bump | Added, Changed, Fixed, Security, Go/No-Go checklist |
 
 Enums: story `status` = draft, enriched, approved, specified, designed, implemented, done. ADR `status` = proposed, accepted, superseded, rejected. QA `verdict` = pass, fail, blocked. Incident `severity` = sev1..sev4, `status` = open, mitigated, resolved. A story in `draft` is only frontmatter-checked.
 

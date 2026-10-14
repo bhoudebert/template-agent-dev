@@ -70,6 +70,10 @@ def check_file(path, root=ROOT):
             errs.append(f"{rel}: missing section `## {name}`")
         elif not secs[name.lower()].strip():
             errs.append(f"{rel}: section `## {name}` is empty")
+    if kind == "qa-report":
+        for token in re.findall(r"`([^`\s]+\.[A-Za-z0-9]+)`", secs.get("traceability", "")):
+            if "/" in token and not (Path(root) / token).exists():
+                errs.append(f"{rel}: cited evidence file does not exist: {token}")
     for name, pattern in schema.get("section_patterns", {}).items():
         text = secs.get(name.lower(), "")
         if text.strip() and not re.search(pattern, text):

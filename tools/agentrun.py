@@ -143,6 +143,14 @@ def parse_files(response, out_globs):
     return accepted, rejected
 
 
+def single_target_fallback(response, out_globs):
+    """A stage with exactly one concrete output path (no wildcard): the reply IS that file."""
+    exact = [g for g in out_globs if not any(c in g for c in "*?[")]
+    if len(exact) == 1 and len(out_globs) == 1 and response.strip():
+        return {exact[0]: response.strip() + "\n"}
+    return {}
+
+
 def run_checks(stage, written, root=ROOT):
     import trace_check
     import validate
@@ -182,6 +190,10 @@ def cmd_run(args, root=ROOT):
         return 0
     response = providers.complete(system, user, stage.get("model", "strong"), provider)
     accepted, rejected = parse_files(response, out_globs)
+    if not accepted and not rejected:
+        accepted = single_target_fallback(response, out_globs)
+        if accepted:
+            print(f"NOTE: no file block in reply; using the whole reply as {next(iter(accepted))}", file=sys.stderr)
     for r in rejected:
         print(f"REJECTED (outside allowed paths): {r}", file=sys.stderr)
     if not accepted:
