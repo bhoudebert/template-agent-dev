@@ -54,6 +54,25 @@ class Zipapp(unittest.TestCase):
         self.assertEqual(json.loads((d / ".agentkit/lock.json").read_text())["version"], "1.1.0")
         self.assertTrue(git(d, "branch", "--show-current").stdout.startswith("chore/agentkit-update-1.1.0"))
 
+    def test_kit_task_wrapper_prefers_agentkit_on_path(self):
+        import os, shutil
+        d = Path(tempfile.mkdtemp())
+        (d / "tools").mkdir()
+        shutil.copy(ROOT / "tools" / "kit.sh", d / "tools" / "kit.sh")
+        (d / "tools" / "agentkit.py").write_text("import sys; print('REPO-COPY', *sys.argv[1:])\n")
+        bin_dir = d / "bin"
+        bin_dir.mkdir()
+        fake = bin_dir / "agentkit"
+        fake.write_text("#!/bin/sh\necho PATH-BINARY \"$@\"\n")
+        fake.chmod(0o755)
+        env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+        r = subprocess.run(["sh", "tools/kit.sh", "update", "--plan"], cwd=d, env=env, text=True, capture_output=True)
+        self.assertEqual(r.stdout.strip(), "PATH-BINARY update --plan")
+        clean = [d for d in os.environ["PATH"].split(os.pathsep) if d and not (Path(d) / "agentkit").exists()]
+        env2 = dict(os.environ, PATH=os.pathsep.join(clean))
+        r = subprocess.run(["sh", "tools/kit.sh", "status"], cwd=d, env=env2, text=True, capture_output=True)
+        self.assertEqual(r.stdout.strip(), "REPO-COPY status")
+
     def test_zipapp_is_executable_and_self_describing(self):
         out = Path(tempfile.mkdtemp()) / "a.pyz"
         build_pyz.build("0.0.1", out)
