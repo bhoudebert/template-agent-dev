@@ -29,6 +29,18 @@ agentkit install             # a branch and one commit; nothing is pushed; revie
 
 Full steps, first-run checklist, updates, conflicts and removal: **[docs/INSTALL.md](docs/INSTALL.md)**.
 
+### How updates reach you (read this once)
+
+Two things exist: the **program** (`agentkit`, one file on your PATH, installed from a GitHub release, holding a
+frozen snapshot of the kit) and the **copy in your repo** (`tools/`, `.agents/`, ... plus `.agentkit/lock.json`).
+Nothing updates itself:
+
+1. `mise upgrade agentkit` gets a newer program (`agentkit --version` shows which).
+2. `agentkit update`, in each repo, copies its snapshot in on a branch as one commit; you review and merge the PR.
+
+Until then the old program and files keep working; `agentkit status` only compares, it downloads nothing.
+Details and the "stuck" table: **[The mental model](docs/INSTALL.md#the-mental-model-read-this-once)**.
+
 ## Learn it
 
 | Read | For |

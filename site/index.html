@@ -29,6 +29,7 @@
       <a href="#review">Review</a>
       <a href="#git">Git</a>
       <a href="#safety">Safety</a>
+      <a href="#updates">Updates</a>
       <a href="docs/install.html">Install</a>
       <a href="docs/tutorial.html">Tutorial</a>
       <a href="docs/workflow.html">Docs</a>
@@ -528,6 +529,32 @@ AGENT_CMD="claude -p"
 </section>
 
 <!-- ============ DOCS ============ -->
+<section id="updates">
+  <div class="wrap">
+    <span class="kicker">Install &amp; updates</span>
+    <h2>Two things: the program, and the copy in your repo.</h2>
+    <p>Nothing updates itself. A new release reaches you in two steps, both yours, and the repo is never touched without a PR.</p>
+    <div class="manage">
+      <div style="--c: var(--accent-1); --c-ink: var(--accent-1-ink)">
+        <span class="cmd-line">$ mise upgrade agentkit</span>
+        <h3>1. The program</h3>
+        <p><code>agentkit</code> is one file on your PATH, installed from a GitHub release. It holds a frozen snapshot of the kit. <code>agentkit --version</code> tells you which.</p>
+      </div>
+      <div style="--c: var(--accent-2); --c-ink: var(--accent-2-ink)">
+        <span class="cmd-line">$ agentkit update</span>
+        <h3>2. The repo copy</h3>
+        <p>Copies that snapshot into <code>tools/</code> and <code>.agents/</code> on a branch, as one commit. You push it, review the PR and merge.</p>
+      </div>
+      <div style="--c: var(--accent-3); --c-ink: var(--accent-3-ink)">
+        <span class="cmd-line">$ agentkit status</span>
+        <h3>Until then, nothing breaks</h3>
+        <p>The old program and files keep working. <code>status</code> compares the two and never downloads anything.</p>
+      </div>
+    </div>
+    <p><a href="docs/install.html#the-mental-model-read-this-once">The mental model, with the &ldquo;stuck&rdquo; table &rarr;</a></p>
+  </div>
+</section>
+
 <section id="docs">
   <div class="wrap">
     <span class="kicker">Documentation</span>
