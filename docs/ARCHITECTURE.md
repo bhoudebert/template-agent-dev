@@ -125,6 +125,46 @@ Scanning scope: `tools/repowalk.py` skips `.agents`, `tools`, `tests`, `evals`, 
 always         every adr/design/qa-report points at an existing story
 ```
 
+## Prompt mode: the same recipe, driven from an assistant
+
+`mise run <stage>` calls a model through the provider layer. **Prompt mode** lets an interactive assistant
+(Claude Code, Codex, Copilot, ...) do the stage instead, under the same recipe and the same guards. Both
+modes use one prompt builder, so they cannot drift (`agentrun.build_prompt`).
+
+```
+orient ──► prepare <stage> <id> ──► [assistant works] ──► apply <stage> <id> --receipt R ──► gate (the user)
+              │ writes .agents/out/bundle-*.md                  │ verifies, confines, validates, traces, logs
+              │ + .agents/runs/receipts/*.json                  └ exit 4 receipt problem, 5 out of scope, 2 check failed
+```
+
+| Piece | Design |
+|---|---|
+| **Bundle** | The whole system prompt (the bible: `AGENTS.md`, `CONTEXT.md`, role, skills, policies), the task, the inputs, templates, the output contract and `docs/INDEX.md`. It is *delivered*, not referenced: the assistant is not asked to go and read files, it is handed them. |
+| **Receipt** | A hash of the bundle, printed in the command output and again at the very end of the bundle. `apply` requires it. It proves the assistant fetched the full, current recipe before working. It does not prove understanding. |
+| **Stale detection** | The receipt record stores a digest of every bible file. If one changed since `prepare`, or the receipt is older than 24 h, `apply` refuses and asks for a new `prepare`. Inputs may change (that is the work). |
+| **Two hand-over modes** | `--response FILE`: blocks of `<<<FILE: path>>>`, confined exactly like the runner. `--worktree`: the assistant edited files directly; `apply` diffs the working tree against the state recorded at `prepare` (files that were already dirty are not blamed) and fails if anything outside the stage's `out` globs changed. |
+| **After apply** | Identical to the runner: `validate`, `trace_check`, run log, gate printout. |
+| **Orientation** | `orient` prints the rules in force, the branch, the story's status and the next action; `next` only the latter. The status ladder, `skip:` and the stage graph decide the answer, not the assistant. |
+| **Entry point** | `AGENTS.md` has a "Prompt mode" section with the protocol and an intent-to-command table. Claude Code imports it through `CLAUDE.md`; Codex and Copilot read `AGENTS.md` / `copilot-instructions.md` natively. No server is needed. |
+
+Limits, stated plainly:
+
+- The write guard in `--worktree` mode is *verification after the fact*, not prevention. A direct edit outside `out` is detected and the stage fails; the offending files are listed so they can be reverted.
+- A receipt shows the recipe was fetched, not that it was followed. Following is what the validators, the reviewer role and your gates are for.
+- Gated actions (`advance`, `ship`, merge) rely on the assistant's rules plus the client's own command-approval prompt. They are not enforced by the repo.
+
+### Knowledge: index, not dump
+
+The bible is small and always injected. The knowledge (stories, OpenSpec specs and changes, ADRs, designs, QA,
+runbooks) is not: `tools/index.py` generates a deterministic `docs/INDEX.md` that is part of every bundle.
+Items linked to the work item are inlined by the stage's `in` globs; the rest is found by search. CI fails if
+the committed index is stale.
+
+**Nothing is mandatory.** Not every story needs a spec, a design or an ADR. A story may declare
+`skip: [spec, design]` with a `skip_reason`; `trace_check` then does not demand those artifacts and
+`advance` may step over the skipped statuses. A project with no ADRs has an empty ADR section, and
+`Refs: none` is a valid PR citation.
+
 ## The review design
 
 The reviewer is a normal stage (`review`) whose input is `@diff`. Two decisions make it useful.

@@ -2,7 +2,7 @@
 
 Mission: find real problems in the diff before a human merges.
 
-Review for: correctness and edge cases, spec/ADR conformance, security (injection, authz, secrets, unsafe deserialization), error handling, test quality, performance traps, maintainability.
+Review for: correctness and edge cases, spec/ADR conformance (does the diff contradict an accepted ADR or a spec requirement? did the author search `docs/INDEX.md` before adding something that exists?), citations (`Refs:` in the PR body; "none" is valid, absence is a minor finding), security (injection, authz, secrets, unsafe deserialization), error handling, test quality, performance traps, maintainability.
 
 Rules
 - Only report issues you can justify from the diff or cited files. Quote file:line.

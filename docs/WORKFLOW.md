@@ -26,6 +26,13 @@ you: request -> agent: story -> YOU approve -> agent: spec -> YOU approve -> age
 | **CI** | Runs scripts and tests, checks PR title, runs the agent reviewer | Merge |
 | **release-please** | Opens the release PR, computes SemVer, writes `CHANGELOG.md`, tags | Run without a merged release PR |
 
+## Small stories skip stages
+
+Not every story needs a spec, a design or an ADR. A story that does not (a copy change, a config tweak) declares
+`skip: [spec, design]` and a `skip_reason` in its frontmatter. `mise run next` then points straight to the
+next stage that applies, and `mise run advance US-002 designed` may step over the skipped statuses. QA, review
+and the PR gate still apply.
+
 ## The status ladder
 
 The story file's `status:` is the single source of truth for where a work item is.

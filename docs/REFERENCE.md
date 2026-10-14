@@ -19,6 +19,11 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `story` `spec` `design` `implement` `qa` `release` `diagnose` | `<id> [--dry\|--plan]` | Run that stage (aliases of `agent:<stage>`) |
 | `agent:test` | `<id> [--dry\|--plan]` | Run the test-engineer stage |
 | `agent` | `<stage> <id> [--dry\|--plan]` | Run any stage |
+| `orient` | `[id]` | Prompt mode: rules in force, branch, story status, next action, check count |
+| `next` | `[id]` | Who acts next and the command |
+| `prepare` | `<stage> <id>` | Prompt mode: write `.agents/out/bundle-<stage>-<id>.md` and print the receipt |
+| `apply` | `<stage> <id> --receipt <code> (--response <file> \| --worktree)` | Prompt mode: verify receipt, confine, validate, trace, log |
+| `index` / `index:check` | | Regenerate / verify `docs/INDEX.md` |
 | `check` | | `validate` + `trace` + `test` |
 | `test` | | The **project's** tests: auto-detects `npm test`, pytest, `go test`, `cargo test`, `mvn test` (`tools/projecttest.sh`) |
 | `test:tools` | | The template's own tool tests (`tools/tests`) |
@@ -70,6 +75,8 @@ mise loads `.env` automatically (git-ignored; template in `.env.example`).
 | 1 | `validate`, `trace_check` | Problems found |
 | 2 | `agentrun` | Checks failed after apply, or the model returned no files |
 | 3 | `agentrun` | Provider error (endpoint, model, timeout, missing config) |
+| 4 | `agentrun apply` | Receipt missing, wrong, stale or expired |
+| 5 | `agentrun apply --worktree` | Files changed outside the stage's allowed paths |
 | 64 | `stage.sh` | Missing arguments |
 
 ## `pipeline.yaml`
@@ -136,6 +143,15 @@ stages:
 File names must match the artifact: `US-001.md`, `ADR-0001-<slug>.md`, `INC-001.md`, `RB-001-<slug>.md`; design, QA and release-notes files are named after their story (`US-001.md`). `validate` rejects a file whose name does not start with its `id` (or `story`).
 
 Enums: story `status` = draft, enriched, approved, specified, designed, implemented, done. ADR `status` = proposed, accepted, superseded, rejected. QA `verdict` = pass, fail, blocked. Incident `severity` = sev1..sev4, `status` = open, mitigated, resolved. A story in `draft` is only frontmatter-checked.
+
+## Story frontmatter: optional `skip`
+
+| Key | Meaning |
+|---|---|
+| `skip: [spec, design]` | This story needs no OpenSpec change and/or no design. `trace_check` does not demand them; `advance` may step over the matching statuses. Only `spec` and `design` can be skipped. |
+| `skip_reason` | Required whenever `skip` is set. Say why (e.g. "copy change", "config only"). |
+
+An ADR is never required by itself: a design note without an ADR satisfies `designed`, and `skip: [design]` needs neither.
 
 ## What `validate` and `trace_check` enforce
 

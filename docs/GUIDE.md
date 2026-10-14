@@ -176,6 +176,29 @@ python3 tools/agentrun.py run diagnose --id INC-001 --apply
 ```
 Output is a ranked hypothesis list and recommended actions. A human executes any mitigation.
 
+## Driving everything from a prompt (Claude Code, Codex, Copilot)
+
+You can run the same workflow from an assistant's prompt instead of typing `mise` commands. The recipe is
+identical; the assistant is the model.
+
+```
+you:        start a story: export invoices as CSV
+assistant:  mise run orient            # rules + state
+            mise run new "Export invoices as CSV" ; mise run branch US-001
+            mise run prepare story US-001     # reads the whole bundle, prints a receipt
+            ...writes the story...
+            mise run apply story US-001 --receipt <code> --worktree
+            "Here is the story and 3 open questions. Approve? I will run advance US-001 approved."
+```
+
+- `mise run orient` / `mise run next` tell the assistant (and you) where things stand and who acts next.
+- `apply` refuses without the receipt printed by `prepare`, and fails if anything outside the stage's allowed
+  paths changed. Checks and gates are exactly the same as `mise run <stage>`.
+- The assistant must wait for your explicit yes before `advance`, `ship` or a merge.
+- The `mise run <stage>` path (any model API, Ollama, or a CLI) is unchanged and is what CI uses.
+
+Not every story needs a spec, a design or an ADR: set `skip: [spec, design]` and a `skip_reason` in the story.
+
 ## Git, versions, releases
 
 - **Branches**: only `main` (always releasable) + one `feature/<US-id>-<slug>` per story. `mise run branch US-002` creates it. Squash-merge PRs.

@@ -18,6 +18,7 @@ import trace_check
 
 ROOT = Path(__file__).resolve().parent.parent
 ORDER = trace_check.ORDER
+STATUS_STAGE = {"specified": "spec", "designed": "design"}  # statuses a story may legitimately skip
 NEXT_STAGE = {
     "draft": "story", "enriched": "(PO approves story)", "approved": "spec",
     "specified": "design", "designed": "implement", "implemented": "qa", "done": "release",
@@ -80,7 +81,12 @@ def set_status(sid, new, force=False, root=ROOT):
     meta, _ = miniyaml.split_frontmatter(text)
     cur = meta.get("status")
     if cur in ORDER and not force and ORDER.index(new) > ORDER.index(cur) + 1:
-        raise SystemExit(f"{sid}: {cur} -> {new} skips a step (use --force)")
+        skip = meta.get("skip") or []
+        skip = skip if isinstance(skip, list) else [skip]
+        passed = ORDER[ORDER.index(cur) + 1: ORDER.index(new)]
+        allowed = all(STATUS_STAGE.get(s) in skip for s in passed)
+        if not allowed:
+            raise SystemExit(f"{sid}: {cur} -> {new} skips a step (use --force, or declare `skip:` in the story)")
     updated, n = re.subn(r"^status:.*$", f"status: {new}", text, count=1, flags=re.M)
     if n != 1:
         raise SystemExit(f"{path}: no status line in frontmatter")
