@@ -147,8 +147,10 @@ paths:                              # stories architecture decisions qa incident
 | `mise run new "..." --id PROJ-4821` | create the story with an existing tracker key instead of the next number (the file is `PROJ-4821.md`) |
 | `python3 tools/config.py regex story` / `path stories` / `format story 12` | what the shell scripts and CI call |
 
-`commands.test` (same file) is the command `mise run test`, `check`, `ship` and CI run for **your** tests. Set it
-for a monorepo or a custom runner; otherwise the root is auto-detected (npm, pytest, go, cargo, mvn).
+`mise run test`, `check`, `ship` and CI run **your** tests, found in this order: `commands.test` in this file, then
+a script of yours at `.agents/commands/test.sh` (never updated by the kit), then the repository root
+(Cargo.toml, go.mod, package.json with a test script, pyproject.toml/pytest.ini/setup.cfg, pom.xml), then each
+sub-folder with one of those markers. `sh tools/projecttest.sh list` shows the result without running it.
 
 Changing the prefix does not rename existing files: rename them (and their `id:` / `story:` fields) in the same PR.
 

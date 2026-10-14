@@ -51,7 +51,7 @@ class TestCommand(unittest.TestCase):
         import shutil
         d = Path(tempfile.mkdtemp())
         (d / "tools").mkdir()
-        for n in ("config.py", "miniyaml.py", "projecttest.sh"):
+        for n in ("config.py", "miniyaml.py", "projecttest.sh", "testcmd.py"):
             shutil.copy(ROOT / "tools" / n, d / "tools" / n)
         (d / ".agents").mkdir()
         (d / ".agents/pipeline.yaml").write_text("commands:\n  test: \"echo RAN-CONFIGURED\"\nstages: []\n")
@@ -61,6 +61,7 @@ class TestCommand(unittest.TestCase):
         r = subprocess.run(["sh", "tools/projecttest.sh"], cwd=d, text=True, capture_output=True)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("commands:", r.stderr)
+        self.assertIn(".agents/commands/test.sh", r.stderr)
 
 
 class CustomPrefixAndPaths(unittest.TestCase):

@@ -166,15 +166,18 @@ mise run ship         # checks, push, open the PR; merge it like any other
 | `mise run doctor` | checks python, git, hooks, endpoint, that the model is served |
 | `mise run check` | runs the validators and **your** tests (npm, pytest, go, cargo and mvn are auto-detected **at the repo root**) |
 
-A monorepo, or any layout without a root-level marker, needs the test command spelled out once, in
-`.agents/pipeline.yaml`:
+How `mise run test` finds your tests (first match wins):
 
-```yaml
-commands:
-  test: "cargo test --manifest-path backend/Cargo.toml && npm --prefix ui test"
-```
+| # | Source | For |
+|---|---|---|
+| 1 | `commands.test` in `.agents/pipeline.yaml` | one command line: `test: "make check"` |
+| 2 | `.agents/commands/test.sh` | a script **you own**; the kit never overwrites it |
+| 3 | the repo root: `Cargo.toml`, `go.mod`, `package.json` with a test script, `pyproject.toml`/`pytest.ini`, `pom.xml` | a single-project repo |
+| 4 | **one folder down**: each sub-folder with one of those markers (so `backend/` and `ui/` are found) | a monorepo |
 
-Without one, `mise run test` stops with a message instead of pretending that nothing failed.
+See what it would run, without running it: `sh tools/projecttest.sh list`. Do **not** edit
+`tools/projecttest.sh` itself: it is kit-managed and an update overwrites it. If nothing is found, `mise run test`
+stops with instructions instead of pretending that nothing failed.
 
 Pick a model (one of):
 

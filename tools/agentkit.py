@@ -812,10 +812,16 @@ def todo_items(target, lock, kit=None):
     items.append((filled, "CONTEXT.md describes your product, stack and test command", "edit CONTEXT.md: every agent reads it first"))
     pipeline = _read(root / ".agents" / "pipeline.yaml")
     markers = ("package.json", "pyproject.toml", "pytest.ini", "setup.cfg", "go.mod", "Cargo.toml", "pom.xml")
-    test_cmd = _configured(pipeline, "commands", "test")
-    has_test = bool(test_cmd) or any((root / m).exists() for m in markers)
-    items.append((has_test, "a test command the kit can run" + (f" ({test_cmd})" if test_cmd else ""),
-                  "set commands.test in .agents/pipeline.yaml (nothing auto-detected at the root)"))
+    has_test, test_what = False, ""
+    runner = root / "tools" / "testcmd.py"
+    if runner.exists():
+        p = run([sys.executable, str(runner), "list"], cwd=root, check=False)
+        has_test = p.returncode == 0
+        lines = [l.strip(" -") for l in p.stdout.splitlines()[1:]]
+        test_what = " (" + "; ".join(" ".join(l.split()[:2]) for l in lines[:4]) + ")" if has_test and lines else ""
+    items.append((has_test, "the kit can find and run your tests" + test_what,
+                  "run `sh tools/projecttest.sh list`; then set commands.test in .agents/pipeline.yaml "
+                  "or add .agents/commands/test.sh"))
     env = _read(root / ".env")
     items.append(("AGENT_MODEL" in env or "AGENT_CMD" in env, ".env sets a model (or AGENT_CMD)",
                   "cp .env.example .env, then set AGENT_MODEL (and AGENT_REASONING_EFFORT=none for a thinking model)"))

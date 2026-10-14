@@ -177,13 +177,13 @@ class Todo(unittest.TestCase):
         (d / "package.json").unlink()
         git(d, "add", "-A"); git(d, "commit", "-q", "-m", "no root test marker")
         cli("install", "--target", d)
-        key = next(k for k in self.items(d) if k.startswith("a test command"))
+        key = next(k for k in self.items(d) if k.startswith("the kit can find and run your tests"))
         self.assertFalse(self.items(d)[key])
         p = d / ".agents/pipeline.yaml"
         p.write_text("commands:\n  test: \"cargo test --manifest-path backend/Cargo.toml\"\n" + p.read_text())
-        key2 = next(k for k in self.items(d) if k.startswith("a test command"))
+        key2 = next(k for k in self.items(d) if k.startswith("the kit can find and run your tests"))
         self.assertTrue(self.items(d)[key2])
-        self.assertIn("cargo test", key2)
+        self.assertIn("configured", key2)
 
     def test_the_command_prints_a_checklist_and_exits_zero(self):
         d = host_repo()
