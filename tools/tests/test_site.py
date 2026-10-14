@@ -16,6 +16,10 @@ class Render(unittest.TestCase):
         self.assertIn('<h2 id="the-developer-loop">', html)
         self.assertEqual(toc, [(2, "the-developer-loop", "The developer loop")])
 
+    def test_toc_text_has_no_markup(self):
+        _, toc = build_site.render("## 0.1 Create **[YOU]** the `repo`\n")
+        self.assertEqual(toc[0][2], "0.1 Create [YOU] the repo")
+
     def test_table_with_escaped_pipe_in_code(self):
         html, _ = build_site.render("| a | b |\n|---|---|\n| `--dry\\|--plan` | x |\n")
         self.assertIn("<code>--dry|--plan</code>", html)
