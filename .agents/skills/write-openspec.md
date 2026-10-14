@@ -1,6 +1,6 @@
 # Skill: write an OpenSpec change
 
-1. Name the folder after the story id: `openspec/changes/US-123/`.
+1. Name the folder after the story id: `openspec/changes/US-123/`. Files start directly with `## ...`: NO frontmatter in any OpenSpec file.
 2. `proposal.md`:
    ```
    ## Why

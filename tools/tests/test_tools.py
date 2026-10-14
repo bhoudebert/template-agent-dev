@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 
 import agentrun  # noqa: E402
@@ -23,6 +23,10 @@ def sandbox():
             shutil.copytree(src, tmp / name, ignore=shutil.ignore_patterns("runs", "out"))
         else:
             shutil.copy(src, tmp / name)
+    # overlay the worked example (US-001) so tests have real artifacts
+    example = ROOT / "examples" / "password-reset"
+    for name in ("docs", "openspec"):
+        shutil.copytree(example / name, tmp / name, dirs_exist_ok=True)
     (tmp / "src").mkdir()
     (tmp / "tests").mkdir()
     return tmp
@@ -50,9 +54,22 @@ class MiniYaml(unittest.TestCase):
 
 
 class Validate(unittest.TestCase):
-    def test_example_repo_clean(self):
+    def test_template_repo_clean(self):
         self.assertEqual(validate.scan(ROOT), [])
         self.assertEqual(trace_check.check(ROOT), [])
+
+    def test_worked_example_is_valid(self):
+        tmp = sandbox()
+        self.assertEqual(validate.scan(tmp), [])
+        self.assertEqual(trace_check.check(tmp), [])
+
+    def test_openspec_frontmatter_rejected(self):
+        tmp = sandbox()
+        p = tmp / "openspec/changes/US-001/tasks.md"
+        p.write_text("---\nstory: US-001\n---\n" + p.read_text())
+        errs = validate.scan(tmp)
+        self.assertTrue(any("must not have frontmatter" in e for e in errs))
+        self.assertEqual(validate.check_file(p, tmp), [])  # not judged as a typed artifact
 
     def test_story_missing_section_and_bad_status(self):
         tmp = sandbox()
@@ -101,7 +118,7 @@ class Validate(unittest.TestCase):
 class Branch(unittest.TestCase):
     def test_branch_name(self):
         import items
-        self.assertEqual(items.branch_name("US-001", ROOT), "feature/US-001-reset-password-by-email")
+        self.assertEqual(items.branch_name("US-001", sandbox()), "feature/US-001-reset-password-by-email")
 
 
 class Runner(unittest.TestCase):
@@ -117,12 +134,25 @@ class Runner(unittest.TestCase):
         self.assertEqual(sorted(bad), ["../evil.txt", "src/app.py"])
 
     def test_prompt_wraps_inputs_and_contract(self):
-        stage = agentrun.find_stage(agentrun.load_pipeline(ROOT), "qa")
-        system, user, out = agentrun.build_prompt(stage, "US-001", ROOT)
+        tmp = sandbox()
+        stage = agentrun.find_stage(agentrun.load_pipeline(tmp), "qa")
+        system, user, out = agentrun.build_prompt(stage, "US-001", tmp)
         self.assertIn("Role: QA", system)
         self.assertIn("policy: security.md", system)
         self.assertIn('<input path="docs/stories/US-001.md">', user)
         self.assertEqual(out, ["docs/qa/US-001.md"])
+
+    def test_design_stage_gets_both_templates_and_todays_date(self):
+        tmp = sandbox()
+        os.environ["AGENT_TODAY"] = "2031-02-03"
+        try:
+            stage = agentrun.find_stage(agentrun.load_pipeline(tmp), "design")
+            _, user, _ = agentrun.build_prompt(stage, "US-001", tmp)
+        finally:
+            del os.environ["AGENT_TODAY"]
+        self.assertIn("# Template `design`", user)
+        self.assertIn("# Template `adr`", user)
+        self.assertIn("Today: 2031-02-03", user)
 
     def test_end_to_end_cmd_provider(self):
         tmp = sandbox()

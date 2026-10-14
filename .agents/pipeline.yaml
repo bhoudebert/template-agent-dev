@@ -30,7 +30,7 @@ stages:
     goal: Produce a design note and ADR(s) for the decisions this change forces.
     in: [docs/stories/{id}.md, "openspec/changes/{id}/**/*.md", "docs/decisions/*.md", "docs/architecture/*.md"]
     out: ["docs/architecture/{id}.md", "docs/decisions/ADR-*.md"]
-    template: adr
+    template: [design, adr]
     skills: [write-adr]
     check: [validate, trace]
     gate: human:tech-lead

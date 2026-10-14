@@ -11,7 +11,7 @@ if [ "$branch" = "main" ] || [ -z "$branch" ]; then
 fi
 python3 tools/validate.py
 python3 tools/trace_check.py
-python3 -m unittest discover -s tests -q
+sh tools/projecttest.sh
 git rev-parse --verify -q "$base" >/dev/null || git fetch -q origin "$base"
 python3 tools/check_attribution.py --range "$base..HEAD"
 git push -u origin HEAD

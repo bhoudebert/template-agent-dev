@@ -11,8 +11,12 @@ _.file = { path = ".env" }
 
 # ---------- dev ----------
 [tasks.test]
-description = "Run unit tests of the tools"
-run = "python3 -m unittest discover -s tests"
+description = "Run the PROJECT tests (auto-detects npm, pytest, go, cargo, mvn)"
+run = "sh tools/projecttest.sh"
+
+[tasks."test:tools"]
+description = "Run the template's own tool tests (tools/tests)"
+run = "python3 -m unittest discover -s tools/tests"
 
 [tasks.validate]
 description = "Validate artifacts against schemas"

@@ -15,7 +15,7 @@ import miniyaml
 
 ROOT = Path(__file__).resolve().parent.parent
 ORDER = ["draft", "enriched", "approved", "specified", "designed", "implemented", "done"]
-SKIP_DIRS = {".git", ".agents", "node_modules", ".venv", "tools", "tests", "evals", "adapters"}
+SKIP_DIRS = {".git", ".agents", "node_modules", ".venv", "tools", "tests", "evals", "adapters", "examples"}
 
 
 def _artifacts(root):

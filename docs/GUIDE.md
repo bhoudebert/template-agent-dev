@@ -68,7 +68,7 @@ draft -> enriched -> approved -> specified -> designed -> implemented -> done
 Requires Python 3.10+. No packages to install.
 
 ```sh
-python3 -m unittest discover -s tests      # tools healthy?
+python3 -m unittest discover -s tools/tests      # tooling healthy?
 python3 tools/validate.py                  # artifacts valid?
 python3 tools/trace_check.py               # story <-> spec <-> ADR <-> QA consistent?
 git init && git add -A && git commit -m "init"   # needed for @diff (qa/review/release)

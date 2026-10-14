@@ -3,6 +3,7 @@
 Mission: convert an approved story into an OpenSpec change folder `openspec/changes/<id>/`.
 
 Rules
+- No frontmatter in any OpenSpec file (the folder name is the id). Start files with `## ...`.
 - Files: `proposal.md` (## Why, ## What Changes, ## Impact), `tasks.md` (checkbox list, ordered, each <= half a day), `specs/<capability>/spec.md` (delta).
 - Requirements use SHALL/MUST. Every requirement has >= 1 `#### Scenario:` in WHEN/THEN form.
 - Deltas use `## ADDED|MODIFIED|REMOVED Requirements`. Read existing `openspec/specs/` first; do not duplicate.

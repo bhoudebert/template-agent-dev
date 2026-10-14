@@ -15,7 +15,7 @@ from pathlib import Path
 import miniyaml
 
 ROOT = Path(__file__).resolve().parent.parent
-SKIP_DIRS = {".git", ".agents", "node_modules", ".venv", "tools", "tests", "evals", "adapters"}
+SKIP_DIRS = {".git", ".agents", "node_modules", ".venv", "tools", "tests", "evals", "adapters", "examples"}
 CHANGE_SECTIONS = ("why", "what changes", "impact")
 SPEC_HEADERS = ("## added requirements", "## modified requirements", "## removed requirements", "## renamed requirements")
 
@@ -37,6 +37,8 @@ def _sections(body):
 def check_file(path, root=ROOT):
     path = Path(path)
     rel = os.path.relpath(path, root)
+    if Path(rel).parts[:1] == ("openspec",):
+        return []  # OpenSpec files are checked by check_change(), not by artifact schema
     try:
         meta, body = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
     except ValueError as e:
@@ -80,6 +82,9 @@ def check_change(change_dir, root=ROOT):
     change_dir = Path(change_dir)
     rel = os.path.relpath(change_dir, root)
     errs = []
+    for md in sorted(change_dir.rglob("*.md")):
+        if md.read_text(encoding="utf-8").startswith("---"):
+            errs.append(f"{os.path.relpath(md, root)}: OpenSpec files must not have frontmatter (the folder name is the story id)")
     proposal = change_dir / "proposal.md"
     if not proposal.exists():
         errs.append(f"{rel}: missing proposal.md")
