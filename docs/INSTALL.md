@@ -20,6 +20,52 @@ It adds files and one marked region in a few shared files. It never rewrites you
 Optional features: `ci` (GitHub workflows, as `agentkit-*.yml`), `docs` (these docs under `docs/agentkit/`),
 `release` (release-please), `pointers` (so Claude Code, Copilot and Cursor load `AGENTS.md`).
 
+## The mental model (read this once)
+
+Two things exist, and people confuse them:
+
+| | The **program** | The **copy in your repo** |
+|---|---|---|
+| What | `agentkit`: one file on your computer, installed by mise from a GitHub release | `tools/`, `.agents/`, `.config/mise/conf.d/agentkit.toml`, ... committed in your repository |
+| Where | your `PATH` (`which agentkit`) | your git repository, shared with your team |
+| Contains | the installer **and a frozen snapshot of the whole kit** for one release | the files the program installed, plus `.agentkit/lock.json` saying which version they came from |
+| Changes when | **you** run `mise upgrade agentkit` | **you** run `agentkit update` and merge the PR |
+
+```
+GitHub release v0.2.0          your computer                 your repository
+ agentkit-*.tar.gz  --mise-->  agentkit (v0.2.0 inside) --install/update--> tools/, .agents/, ...
+                               (mise upgrade agentkit)      (a branch + one commit, then a PR)
+```
+
+What follows from that:
+
+- **Nothing updates itself.** `agentkit status`, `mise run kit:status` and the other `kit:*` tasks only run
+  the program you already have and compare it with `.agentkit/lock.json`. They do not look at GitHub and
+  download nothing.
+- **A new release reaches you in two steps, both yours:** (1) `mise upgrade github:bhoudebert/template-agent-dev` (or the forced install in [Update](#upgrading-the-program-when-mise-upgrade-does-nothing)) gets the newer
+  program; (2) `agentkit update` in each repository copies the new files in, as a PR you review and merge.
+- **Until you do that, nothing breaks.** The old program keeps working and the repository keeps the files it
+  has. You only miss what is new: a command that does not exist yet (`agentkit todo`, `--version`, test
+  discovery) fails with `invalid choice: 'todo'`, or a `mise run` task is absent because its definition ships in the
+  repo copy and arrives with `agentkit update`.
+- **Upgrading the program alone is often enough** for installer commands (`install`, `todo`, `status`,
+  `update`, `uninstall`). **Updating the repo** is needed for the tools and `mise run` tasks that live in the
+  repository.
+- **Which version do I have?** `agentkit --version` is the program. `agentkit status` also prints the version
+  the repository was installed from. Different numbers mean you have an update to apply.
+- **Two repositories, two copies.** Each repository records its own version. Upgrading the program does not
+  touch any repository; you run `agentkit update` in each.
+
+The "stuck" cases:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `agentkit: command not found` | not installed, or mise shims not on `PATH` | step 1; `mise reshim` |
+| `agentkit --version` says the old number after upgrading, or `mise upgrade` does nothing | mise hides releases younger than its cooldown, or treats the old `latest` folder as current | `mise install "github:bhoudebert/template-agent-dev@<version>" --force --minimum-release-age 0` ([details](#upgrading-the-program-when-mise-upgrade-does-nothing)) |
+| `invalid choice: 'todo'` (or another command) | the program is older than the feature | `mise upgrade agentkit` |
+| a `mise run` task is missing in the repo | the repo copy is older than the program | `agentkit update`, merge the PR |
+| `no kit source here ...` | the repo was installed from a release and the program is not on `PATH` | install or upgrade `agentkit`, or pass `--from <kit clone or URL>` |
+
 ## Before you start
 
 | Need | Why | Check |
@@ -182,6 +228,21 @@ How `mise run test` finds your tests (first match wins):
 | 4 | the repo root: `Cargo.toml`, `go.mod`, `package.json` with a test script, `pyproject.toml`/`pytest.ini`, `pom.xml` | a single-project repo |
 | 5 | **one folder down**: each sub-folder with one of those markers (so `backend/` and `ui/` are found) | a monorepo, zero config |
 
+**No config file? It tries on its own.** Rows 4 and 5 are automatic: it looks for these files at the repo
+root, then one folder down (skipping `node_modules`, `target`, `vendor`, `dist`, `build`, `docs`, `examples`,
+`tools`, `site`, `openspec`, `venv`), and runs the usual command. The suite name is the folder name.
+
+| It finds | It runs |
+|---|---|
+| `Cargo.toml` | `cargo test` |
+| `go.mod` | `go test ./...` |
+| `package.json` with a real `test` script | `npm test` |
+| `pyproject.toml`, `pytest.ini`, `setup.cfg` | `pytest` |
+| `pom.xml` | `mvn test` |
+
+That is a guess from conventions. Declare suites (below) when you need a different command, env vars, a
+timeout, a suite that only runs on request, or when it picks up a folder that is not a project.
+
 The declared form, for when you want control:
 
 ```yaml
@@ -201,6 +262,20 @@ suites:
     manual: true              # only when named: mise run test e2e
     optional: true            # a failure is reported but does not fail the run
 ```
+
+`run` is any shell command, executed in `dir`: a mise task, a script, a `docker compose` call, or several
+commands chained with `&&`. That is how you add a heavy end-to-end or non-regression suite:
+
+```yaml
+  - name: nrt
+    dir: .
+    run: mise r nrt           # a task defined in YOUR mise.toml (or: sh scripts/nrt.sh)
+    env: [API_URL=http://localhost:8080]
+    timeout: 1800
+    manual: true              # not in a plain `mise run test`; run it with `mise run test nrt`
+```
+
+`env` is a list of `KEY=value` strings, not a map. The task named in `run` is yours: the kit does not define it.
 
 ```sh
 mise run test              # every suite that is not manual; all run, a failure fails the run and names the suite
@@ -263,7 +338,24 @@ agentkit update               # branch chore/agentkit-update-<version>, one comm
 | `agentkit update docs` | the kit docs |
 | `agentkit update ci` | workflows. **Only when you ask**: CI is installed once and refreshed on purpose. |
 
-Get the newer kit first: re-download the release file (or `mise upgrade agentkit`), or `git pull` your clone.
+Get the newer program first (`mise upgrade agentkit`, or re-download the release file, or `git pull` your clone): `update` copies what is **inside the program you run**, it does not fetch anything. See [The mental model](#the-mental-model-read-this-once).
+
+### Upgrading the program when `mise upgrade` does nothing
+
+If your config says `"github:bhoudebert/template-agent-dev" = "latest"`, mise may report
+`All tools are up to date` while an older release sits in its `latest` folder, and the cooldown can hide
+the newest releases (`N newer ... releases hidden by minimum_release_age`). Name the tool in full (`agentkit`
+alone is not a mise tool name) and force the version you want:
+
+```sh
+GITHUB_TOKEN=$(gh auth token) \
+  mise install "github:bhoudebert/template-agent-dev@0.2.0" --force --minimum-release-age 0
+mise exec -- agentkit --version      # or: agentkit --version, once mise is activated in your shell
+```
+
+`GITHUB_TOKEN` avoids GitHub's 60 requests/hour anonymous limit. If it still looks stale, `mise cache clear`
+and run it again. Replace `0.2.0` with the release you want (see the
+[releases page](https://github.com/bhoudebert/template-agent-dev/releases)).
 
 What an update does to each kind of file:
 
@@ -328,6 +420,8 @@ edited (add `--force` to remove edited files too).
 | `mise: command not found` | install mise, or run the tools directly: see the table above |
 | `agentkit: command not found` | the release file is not on your PATH: `~/.local/bin` must be on it, or call it by full path |
 | `mise use github:...` finds no version, or no asset | see the table in step 1: the release-age cooldown, or a release without the asset |
+| `mise upgrade` says `All tools are up to date` but `agentkit --version` is old | the `latest` folder holds an old release, or the cooldown hides the new one: see [Upgrading the program when `mise upgrade` does nothing](#upgrading-the-program-when-mise-upgrade-does-nothing) |
+| `mise upgrade` says `All tools are up to date` but `agentkit --version` is old | the `latest` folder holds an old release, or the cooldown hides the new one: see [Upgrading the program when `mise upgrade` does nothing](#upgrading-the-program-when-mise-upgrade-does-nothing) |
 | `agentkit check` fails | unresolved conflict markers: `agentkit reconcile`, or edit the files |
 | A stage runs for minutes then `model returned no text` | a thinking model used its budget: `AGENT_REASONING_EFFORT=none` |
 | `doctor` says hooks not enabled | `mise run hooks` |
