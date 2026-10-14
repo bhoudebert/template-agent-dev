@@ -1,0 +1,18 @@
+# Versioning: release-please keeps a "release PR" open on main (SemVer from Conventional Commits).
+# Merging it tags vX.Y.Z, updates CHANGELOG.md and creates the GitHub release.
+# Change `release-type` in release-please-config.json to match your stack (node, python, go, ...).
+name: release-please
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

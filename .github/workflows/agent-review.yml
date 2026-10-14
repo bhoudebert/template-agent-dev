@@ -1,0 +1,35 @@
+# Auto review: runs the `review` stage on the PR diff and posts one comment.
+# Needs repo secret AGENT_API_KEY and variables AGENT_BASE_URL, AGENT_MODEL_STRONG.
+# Story id is taken from the branch name (e.g. feature/US-001-reset) or PR title.
+name: agent-review
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Find story id
+        id: sid
+        run: |
+          id=$(echo "${{ github.head_ref }} ${{ github.event.pull_request.title }}" | grep -oE 'US-[0-9]+' | head -1)
+          echo "id=${id:-US-000}" >> "$GITHUB_OUTPUT"
+      - name: Run reviewer
+        env:
+          AGENT_PROVIDER: openai
+          AGENT_BASE_URL: ${{ vars.AGENT_BASE_URL }}
+          AGENT_MODEL_STRONG: ${{ vars.AGENT_MODEL_STRONG }}
+          AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
+          AGENT_BASE_REF: origin/${{ github.base_ref }}
+        run: python tools/agentrun.py run review --id "${{ steps.sid.outputs.id }}" --apply
+      - name: Post comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file ".agents/out/review-${{ steps.sid.outputs.id }}.md"

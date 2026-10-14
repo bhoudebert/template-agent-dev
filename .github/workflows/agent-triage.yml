@@ -1,0 +1,47 @@
+# Issue triage: when an issue gets the `agent:enrich` label, draft US-<n> and open a PR.
+# Human gate: product-owner reviews/merges that PR. Issue text is untrusted input.
+name: agent-triage
+on:
+  issues:
+    types: [labeled]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  enrich:
+    if: github.event.label.name == 'agent:enrich'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Seed raw story
+        env:
+          TITLE: ${{ github.event.issue.title }}
+          BODY: ${{ github.event.issue.body }}
+          NUM: ${{ github.event.issue.number }}
+        run: |
+          id=$(printf 'US-%03d' "$NUM")
+          mkdir -p docs/stories
+          {
+            printf -- '---\nid: %s\ntype: story\ntitle: %s\nstatus: draft\nowner: product-owner\n---\n\n## Story\n' "$id" "$(echo "$TITLE" | tr -d ':#\n')"
+            printf '%s\n' "$BODY"
+          } > "docs/stories/$id.md"
+          echo "ID=$id" >> "$GITHUB_ENV"
+      - name: Enrich
+        env:
+          AGENT_PROVIDER: openai
+          AGENT_BASE_URL: ${{ vars.AGENT_BASE_URL }}
+          AGENT_MODEL_CHEAP: ${{ vars.AGENT_MODEL_CHEAP }}
+          AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
+        run: python tools/agentrun.py run story --id "$ID" --apply
+      - name: Open PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "agent-bot"; git config user.email "agent-bot@users.noreply.github.com"
+          git checkout -b "agent/$ID-story"
+          git add docs/stories
+          git commit -m "docs: enrich $ID from issue #${{ github.event.issue.number }}"
+          git push -u origin HEAD
+          gh pr create --title "$ID: enriched story" --body "Closes #${{ github.event.issue.number }}. Gate: product-owner."
