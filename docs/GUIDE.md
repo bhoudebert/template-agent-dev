@@ -32,6 +32,7 @@ mise run status                         # all stories, status, next stage
 | `check`, `validate`, `trace`, `test` | deterministic checks |
 | `doctor`, `env`, `stages`, `status` | inspect setup / pipeline / items |
 | `install:github`, `install:tools` | wire CI and tool pointers |
+| `site` / `site:build` | build and serve / only build the documentation website |
 
 The plain `python3 tools/...` commands in the rest of this guide still work without mise.
 
