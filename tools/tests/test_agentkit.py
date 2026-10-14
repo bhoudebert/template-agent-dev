@@ -129,6 +129,95 @@ class Install(unittest.TestCase):
             cli("install", "--target", d)
 
 
+class Reconcile(unittest.TestCase):
+    def conflicted(self):
+        d = host_repo()
+        cli("install", "--target", d)
+        git(d, "switch", "-q", "main"); git(d, "merge", "-q", "--ff-only", "chore/agentkit-install")
+        role = d / ".agents/roles/analyst.md"
+        role.write_text(role.read_text().replace("Mission:", "Our mission:"))
+        git(d, "commit", "-qam", "local mission")
+
+        def release(k):
+            r = k / ".agents/roles/analyst.md"
+            r.write_text(r.read_text().replace("Mission:", "Purpose:"))
+        cli("update", "--target", d, "--from", kit_copy(release))
+        self.assertIn("<<<<<<< local", role.read_text())
+        return d, role
+
+    def run_with_reply(self, d, reply_text):
+        import os
+        script = d / "model.sh"
+        reply = d / "reply.txt"
+        reply.write_text(reply_text)
+        script.write_text(f"#!/bin/sh\ncat > /dev/null\ncat {reply}\n")
+        old = dict(os.environ)
+        os.environ.update(AGENT_PROVIDER="cmd", AGENT_CMD=f"sh {script}")
+        try:
+            return cli("reconcile", "--target", d)
+        finally:
+            os.environ.clear(); os.environ.update(old)
+
+    def test_diff3_markers_carry_the_base(self):
+        d, role = self.conflicted()
+        text = role.read_text()
+        self.assertIn("||||||| base", text)
+        self.assertIn(">>>>>>> kit", text)
+
+    def test_model_resolution_is_validated_written_and_committed(self):
+        d, role = self.conflicted()
+        good = ("RATIONALE: kept our mission wording, adopted the kit's purpose rename.\n<<<MERGED>>>\n"
+                "# Role: Analyst\n\nOur purpose: turn requests into stories.\n<<<END>>>\n")
+        self.assertEqual(self.run_with_reply(d, good), 0)
+        self.assertNotIn("<<<<<<<", role.read_text())
+        self.assertIn("Our purpose", role.read_text())
+        self.assertEqual(cli("check", "--target", d), 0)
+        self.assertIn("Reconciled by a model", (d / ".agentkit/CHANGES.md").read_text())
+        self.assertTrue(git(d, "log", "-1", "--format=%s").stdout.startswith("chore(agentkit): reconcile"))
+
+    def test_a_bad_reply_leaves_the_file_untouched(self):
+        d, role = self.conflicted()
+        before = role.read_text()
+        bad = "RATIONALE: done.\n<<<MERGED>>>\n<<<<<<< local\nstill conflicted\n=======\nx\n>>>>>>> kit\n<<<END>>>\n"
+        self.assertEqual(self.run_with_reply(d, bad), 1)
+        self.assertEqual(role.read_text(), before)
+        self.assertEqual(self.run_with_reply(d, "no structure at all"), 1)
+        self.assertEqual(role.read_text(), before)
+
+    def test_brief_mode_writes_files_for_an_assistant(self):
+        d, role = self.conflicted()
+        self.assertEqual(cli("reconcile", "--target", d, "--brief"), 0)
+        briefs = list((d / ".agentkit/reconcile").glob("*.md"))
+        self.assertEqual(len(briefs), 1)
+        self.assertIn("integrator.md", briefs[0].read_text())
+        self.assertIn("<<<<<<< local", briefs[0].read_text())
+
+    def test_block_conflicts_are_resolved_inside_the_block(self):
+        d = host_repo()
+        cli("install", "--target", d)
+        git(d, "switch", "-q", "main"); git(d, "merge", "-q", "--ff-only", "chore/agentkit-install")
+        a = d / "AGENTS.md"
+        text = a.read_text()
+        inner_marker = "Entry point for any coding agent"
+        self.assertIn(inner_marker, text)
+        a.write_text(text.replace(inner_marker, "Our entry point for any coding agent", 1))
+        git(d, "commit", "-qam", "tune agents")
+
+        def release(k):
+            f = k / "AGENTS.md"
+            f.write_text(f.read_text().replace(inner_marker, "Starting point for any coding agent", 1))
+        cli("update", "--target", d, "--from", kit_copy(release))
+        self.assertIn("<<<<<<< local", a.read_text())
+        # the model resolves only the block's inner text
+        reply = ("RATIONALE: kept ours.\n<<<MERGED>>>\n# AGENTS.md\n\nOur starting point for any coding agent.\n<<<END>>>\n")
+        self.assertEqual(self.run_with_reply(d, reply), 0)
+        out = a.read_text()
+        self.assertIn("Use tabs. Never touch billing/.", out)      # the host's own text is intact
+        self.assertIn("Our starting point for any coding agent.", out)
+        self.assertNotIn("<<<<<<<", out)
+        self.assertEqual(out.count("agentkit:begin"), 1)
+
+
 class ConflictDetection(unittest.TestCase):
     def test_only_real_marker_lines_count(self):
         real = "a\n<<<<<<< local\nmine\n||||||| base\nold\n=======\ntheirs\n>>>>>>> kit\nb\n"

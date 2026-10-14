@@ -90,7 +90,7 @@ def three_way(ours, base, theirs):
             p = Path(d) / name
             p.write_text(content, encoding="utf-8")
             paths.append(str(p))
-        p = subprocess.run(["git", "merge-file", "-p", "-L", "local", "-L", "base", "-L", "kit", *paths],
+        p = subprocess.run(["git", "merge-file", "-p", "--diff3", "-L", "local", "-L", "base", "-L", "kit", *paths],
                            text=True, capture_output=True)
         if p.returncode < 0 or p.returncode > 127:
             raise SystemExit(f"git merge-file failed: {p.stderr}")
@@ -507,6 +507,136 @@ def cmd_update(args):
         cleanup()
 
 
+def _markers_in(text):
+    return has_conflict(text)
+
+
+def _local_side(text):
+    """Lines of the `local` side of every conflict region, for the dropped-lines report."""
+    out, mode = [], None
+    for line in text.splitlines():
+        if line.startswith("<<<<<<< local"):
+            mode = "local"
+        elif line.startswith("||||||| base") or line.startswith("======="):
+            mode = None if line.startswith("=======") else "base"
+        elif line.startswith(">>>>>>> kit"):
+            mode = None
+        elif mode == "local" and line.strip():
+            out.append(line.strip())
+    return out
+
+
+def validate_resolution(dst, resolved):
+    """Hard guards on a proposed merge. Returns a list of problems."""
+    problems = []
+    if not resolved.strip():
+        problems.append("empty result")
+    if _markers_in(resolved) or "||||||| base" in resolved:
+        problems.append("conflict markers remain")
+    if dst.endswith(".json"):
+        try:
+            json.loads(resolved)
+        except ValueError as e:
+            problems.append(f"invalid JSON: {e}")
+    if dst.endswith(".toml"):
+        try:
+            import tomllib
+            tomllib.loads(resolved)
+        except Exception as e:  # noqa: BLE001 - any parse error is a rejection
+            problems.append(f"invalid TOML: {e}")
+    return problems
+
+
+def parse_reply(reply):
+    import re
+    rat = re.search(r"RATIONALE:\s*(.+?)(?:\n<<<MERGED>>>|\Z)", reply, re.S)
+    m = re.search(r"<<<MERGED>>>\n(.*?)\n?<<<END>>>", reply, re.S)
+    return (rat.group(1).strip() if rat else ""), (m.group(1) if m else None)
+
+
+def conflicted_files(target, lock):
+    out = []
+    for dst, rec in sorted((lock or {}).get("files", {}).items()):
+        p = target.path(dst)
+        if p.is_file() and _markers_in(p.read_text(encoding="utf-8", errors="replace")):
+            out.append((dst, rec["class"]))
+    return out
+
+
+def cmd_reconcile(args):
+    target = Target(args.target)
+    lock = target.lock()
+    if not lock:
+        raise SystemExit("agentkit is not installed here")
+    files = conflicted_files(target, lock)
+    if not files:
+        print("reconcile: no conflicted files")
+        return 0
+    role_p = target.path(".agents/roles/integrator.md")
+    role = role_p.read_text(encoding="utf-8") if role_p.exists() else (KIT_ROOT / ".agents/roles/integrator.md").read_text()
+    ctx_p = target.path("CONTEXT.md")
+    context = ctx_p.read_text(encoding="utf-8") if ctx_p.exists() else "(no CONTEXT.md)"
+    briefs = {}
+    for dst, cls in files:
+        text = target.path(dst).read_text(encoding="utf-8")
+        inner = get_block(text, dst) if cls == "block" else text
+        briefs[dst] = (cls, text, inner if inner is not None else text)
+    if args.brief:
+        outdir = target.path(".agentkit/reconcile")
+        outdir.mkdir(parents=True, exist_ok=True)
+        for dst, (cls, _, inner) in briefs.items():
+            name = dst.replace("/", "__") + ".md"
+            (outdir / name).write_text(
+                f"# Reconcile `{dst}` ({cls})\n\nFollow `.agents/roles/integrator.md`. Resolve the markers below, "
+                f"edit `{dst}` in place (for a block: only inside agentkit:begin/end), then run `mise run kit:check`.\n\n"
+                f"## Project context\n\n{context}\n\n## File with conflict markers\n\n```\n{inner}\n```\n", encoding="utf-8")
+            print(f"brief: .agentkit/reconcile/{name}")
+        print("Give these briefs to your assistant (or run `agentkit reconcile` with a model configured).")
+        return 0
+    if args.plan:
+        for dst, (cls, *_rest) in briefs.items():
+            print(f"would reconcile {dst} ({cls})")
+        return 0
+    import providers
+    done, failed, report = [], [], []
+    for dst, (cls, text, inner) in briefs.items():
+        user = (f"Project context (CONTEXT.md):\n{context}\n\nFile: {dst} (class: {cls})\n\n"
+                f"File content with diff3 conflict markers:\n<<<FILE>>>\n{inner}\n<<<END>>>\n")
+        try:
+            reply = providers.complete(role, user, "strong", args.provider)
+        except providers.ProviderError as e:
+            raise SystemExit(f"reconcile needs a model: {e}\n(use `reconcile --brief` to hand the files to an assistant)")
+        rationale, merged = parse_reply(reply)
+        problems = validate_resolution(dst, merged or "")
+        if merged is None:
+            problems.append("no <<<MERGED>>> block in the reply")
+        if problems:
+            failed.append((dst, problems))
+            continue
+        dropped = [l for l in _local_side(inner) if l not in merged]
+        new_text = set_block(text, dst, merged.strip("\n")) if cls == "block" else merged.rstrip("\n") + "\n"
+        target.path(dst).write_text(new_text, encoding="utf-8")
+        done.append(dst)
+        report.append((dst, rationale, dropped))
+    for dst, rationale, dropped in report:
+        print(f"resolved {dst}: {rationale or '(no rationale)'}")
+        for l in dropped[:5]:
+            print(f"   not in result (review!): {l[:100]}")
+    for dst, problems in failed:
+        print(f"LEFT AS IS {dst}: {'; '.join(problems)}")
+    if report:
+        cp = target.path(CHANGES)
+        extra = ["", "## Reconciled by a model (review each diff)", ""]
+        for dst, rationale, dropped in report:
+            extra.append(f"- `{dst}`: {rationale or 'no rationale given'}")
+            extra += [f"  - project line not in the result: `{l[:100]}`" for l in dropped[:10]]
+        cp.write_text((cp.read_text(encoding="utf-8") if cp.exists() else "# agentkit\n") + "\n".join(extra) + "\n",
+                      encoding="utf-8")
+        if not args.no_commit:
+            commit(target, done + [CHANGES], "chore(agentkit): reconcile update conflicts")
+    return 1 if failed else 0
+
+
 def cmd_check(args):
     target = Target(args.target)
     lock = target.lock()
@@ -545,6 +675,13 @@ def main(argv=None):
     u.add_argument("scopes", nargs="*", help="tools agents docs ci all (default: tools agents docs)")
     u.add_argument("--with", dest="with_", default="", help="add features: ci,docs,release")
     u.set_defaults(fn=cmd_update)
+    r = sub.add_parser("reconcile", help="resolve update conflicts with a model (or write briefs for an assistant)")
+    r.add_argument("--target", default=".")
+    r.add_argument("--provider", help="openai | cmd (default: AGENT_PROVIDER)")
+    r.add_argument("--brief", action="store_true", help="write briefs to .agentkit/reconcile/ instead of calling a model")
+    r.add_argument("--plan", action="store_true")
+    r.add_argument("--no-commit", action="store_true")
+    r.set_defaults(fn=cmd_reconcile)
     c = sub.add_parser("check")
     c.add_argument("--target", default=".")
     c.set_defaults(fn=cmd_check)
