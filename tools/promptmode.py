@@ -63,6 +63,9 @@ def _record_path(root, stage, item_id):
 def prepare(stage_name, item_id, root=ROOT):
     root = Path(root)
     stage = agentrun.find_stage(agentrun.load_pipeline(root), stage_name)
+    problems = agentrun.preflight(stage_name, item_id, root)
+    if problems:
+        raise SystemExit("NEEDS INPUT: " + " ".join(problems))
     system, user, out_globs = agentrun.build_prompt(stage, item_id, root)
     code = _sha(f"{stage_name}\n{item_id}\n{system}\n{user}")[:16]
     bible = {rel: _digest(root / rel) for rel in agentrun.bible_files(stage, root)}

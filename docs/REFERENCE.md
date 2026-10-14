@@ -8,7 +8,7 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 
 | Task | Arguments | Effect |
 |---|---|---|
-| `new` | `<title...>` | Create the next `docs/stories/US-NNN.md` as a raw draft |
+| `new` | `<title...> [--text "<request>"]` | Create the next `docs/stories/US-NNN.md` as a raw draft; `--text` fills in the request, otherwise edit the file |
 | `incident` | `<title...>` | Create the next `docs/incidents/INC-NNN.md` from the template |
 | `hooks` | | Enable `.githooks` (commit-msg blocks agent names) |
 | `ship` | `[--draft] [--base <branch>]` | Checks, push, open PR; refuses on `main` |
@@ -75,6 +75,7 @@ mise loads `.env` automatically (git-ignored; template in `.env.example`).
 | 1 | `validate`, `trace_check` | Problems found |
 | 2 | `agentrun` | Checks failed after apply, or the model returned no files |
 | 3 | `agentrun` | Provider error (endpoint, model, timeout, missing config) |
+| 6 | `agentrun run`, `prepare` | The stage needs input first (e.g. the story has no request text) |
 | 4 | `agentrun apply` | Receipt missing, wrong, stale or expired |
 | 5 | `agentrun apply --worktree` | Files changed outside the stage's allowed paths |
 | 64 | `stage.sh` | Missing arguments |

@@ -179,7 +179,9 @@ mise run new Shorten a URL      # -> docs/stories/US-001.md  (status: draft)
 mise run branch US-001          # -> feature/US-001-shorten-a-url
 ```
 
-The id is allocated for you. The branch is created immediately, so nothing is ever committed on `main`.
+The id is allocated for you (the next free `US-NNN`). `new` creates **only the file**, holding your title and a placeholder; it does not call a model. The branch is created immediately, so nothing is ever committed on `main`.
+
+Shortcut: `mise run new Shorten a URL --text "<your request>"` creates the file with the request already in it.
 
 ### 1.2 Write the request in your own words **[YOU]**
 
@@ -209,7 +211,7 @@ mise run story US-001 --plan    # calls the model, lists files, writes nothing
 mise run story US-001           # writes docs/stories/US-001.md and runs the checks
 ```
 
-The analyst role rewrites the file into the template: Story, Acceptance criteria (Given/When/Then), Edge cases, Out of scope, Open questions. Status becomes `enriched`.
+The analyst role **reads** the file you just wrote (plus `CONTEXT.md`) and **rewrites that same file** into the template. If the file still holds only the title, the stage refuses (`NEEDS INPUT`) instead of inventing a story. The result: Story, Acceptance criteria (Given/When/Then), Edge cases, Out of scope, Open questions. Status becomes `enriched`.
 
 ### 2.2 Automatic check **[AUTO]**
 

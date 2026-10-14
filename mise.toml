@@ -43,8 +43,9 @@ run = "python3 tools/agentrun.py list"
 description = "Create a raw story with next id:  mise run new Export invoices as CSV"
 usage = '''
 arg "<title>" var=#true help="Story title (no quotes needed)"
+flag "--text <text>" help="the request in your own words; otherwise edit the file afterwards"
 '''
-run = 'python3 tools/items.py new-story ${usage_title}'
+run = 'python3 tools/items.py new-story ${usage_title} ${usage_text:+--text "$usage_text"}'
 
 [tasks.incident]
 description = "Create an incident file from template:  mise run incident Checkout 500s"

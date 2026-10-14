@@ -58,8 +58,8 @@ draft -> enriched -> approved -> specified -> designed -> implemented -> done
 Each card: what you do **before**, what the **agent** does, what you **check** at the gate, what you do **after**.
 
 ### 1. Story (analyst)
-- **Before**: `mise run new "Export invoices as CSV"`, then immediately `mise run branch US-002` so you are off `main` before anything is committed (PR mode: nothing is ever committed on `main`). Write the request in your own words under the frontmatter.
-- **Agent**: `mise run story US-002`. Produces Story, Acceptance criteria (Given/When/Then), Edge cases, Out of scope, Open questions.
+- **Before**: `mise run new "Export invoices as CSV" --text "Finance wants all invoices of a month as CSV, with a VAT column."` creates `docs/stories/US-NNN.md` (the next free id) holding your title and request. Without `--text` it holds only the title and a placeholder: open the file and write the request in your own words. Then immediately `mise run branch US-NNN` so you are off `main` before anything is committed (PR mode: nothing is ever committed on `main`).
+- **Agent**: `mise run story US-002`. It **reads** your story file (the request you wrote) and `CONTEXT.md`, then **rewrites that same file** into Story, Acceptance criteria (Given/When/Then), Edge cases, Out of scope, Open questions. If the file still holds only the title, it refuses (`NEEDS INPUT`, exit 6) rather than invent a story.
 - **Check** (product owner): are the criteria what you meant? Answer every open question. Is it small enough to ship alone?
 - **After**: `mise run advance US-002 approved`. Commit.
 

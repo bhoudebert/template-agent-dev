@@ -158,6 +158,27 @@ class Skip(unittest.TestCase):
         self.assertEqual(shutil_ok, ("approved", "implemented"))
 
 
+class Preflight(unittest.TestCase):
+    def test_story_stage_refuses_an_empty_request(self):
+        d = Path(tempfile.mkdtemp())
+        import shutil
+        for n in (".agents", "AGENTS.md", "CONTEXT.md"):
+            s = ROOT / n
+            shutil.copytree(s, d / n) if s.is_dir() else shutil.copy(s, d / n)
+        sid, path = items.new_story("Export invoices as CSV", root=d)   # title only
+        import agentrun
+        probs = agentrun.preflight("story", sid, d)
+        self.assertTrue(probs and "no request yet" in probs[0])
+        with self.assertRaises(SystemExit):
+            promptmode.prepare("story", sid, d)
+        items.new_story("Another", root=d, text="Finance wants all invoices of a month as CSV with VAT.")
+        self.assertEqual(agentrun.preflight("story", "US-002", d), [])
+
+    def test_other_stages_are_not_blocked(self):
+        import agentrun
+        self.assertEqual(agentrun.preflight("spec", "US-001", ROOT), [])
+
+
 class Next(unittest.TestCase):
     def test_next_action(self):
         who, text = orient.next_action("US-1", {"status": "enriched"})
