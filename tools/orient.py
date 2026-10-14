@@ -22,7 +22,10 @@ STATUS_FOR = {"spec": "specified", "design": "designed"}   # stages that may be 
 
 def current_branch(root):
     p = subprocess.run(["git", "branch", "--show-current"], cwd=root, text=True, capture_output=True)
-    return p.stdout.strip() if p.returncode == 0 else ""
+    if p.returncode != 0:  # git < 2.22
+        p = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=root, text=True, capture_output=True)
+    name = p.stdout.strip() if p.returncode == 0 else ""
+    return "" if name == "HEAD" else name
 
 
 def load_story(root, sid):

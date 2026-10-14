@@ -7,6 +7,7 @@
 Assistants and models see it in every stage bundle. Nothing here is mandatory content: a
 project with no ADRs simply has an empty ADR section.
 """
+import os
 import re
 import sys
 from pathlib import Path
@@ -56,8 +57,12 @@ def _table(head, rows):
     return "\n".join(lines) + "\n"
 
 
+def _rel(root, path):
+    return Path(os.path.relpath(path, root)).as_posix()
+
+
 def _link(root, path, label):
-    return f"[{label}]({Path(path).relative_to(root).as_posix()})"
+    return f"[{label}]({_rel(root, path)})"
 
 
 def build(root=ROOT):
@@ -103,7 +108,7 @@ def build(root=ROOT):
     if sdir.is_dir():
         for spec in sorted(sdir.glob("*/spec.md")):
             reqs = re.findall(r"^###\s+Requirement:\s*(.+)$", spec.read_text(encoding="utf-8"), re.M)
-            rows.append([f"[{spec.parent.name}]({spec.relative_to(root).as_posix()})", "; ".join(r.strip() for r in reqs)])
+            rows.append([f"[{spec.parent.name}]({_rel(root, spec)})", "; ".join(r.strip() for r in reqs)])
     out.append(_table(["Capability", "Requirements"], rows))
 
     out.append("## Decisions (ADR)\n")
@@ -142,7 +147,7 @@ def main(argv):
         return 0
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(text, encoding="utf-8")
-    print(f"wrote {target.relative_to(ROOT)}")
+    print(f"wrote {_rel(ROOT, target)}")
     return 0
 
 
