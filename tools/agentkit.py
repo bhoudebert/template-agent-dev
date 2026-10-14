@@ -19,9 +19,33 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
-KIT_ROOT = Path(__file__).resolve().parent.parent
+KIT_ROOT = Path(__file__).resolve().parent.parent   # a clone's root; inside a zipapp see running_kit_root()
+_PAYLOAD = []
+
+
+def running_kit_root():
+    """Directory holding the kit this process belongs to.
+
+    From a clone: the repository root. From a release zipapp (`agentkit.pyz`): the embedded payload,
+    extracted once to a temp dir. In an adopting repo, tools/agentkit.py has no kit beside it: the
+    returned directory then has no kit.json and the caller falls back to the lock's source."""
+    here = Path(__file__).resolve()
+    archive = here.parent
+    if archive.is_file() and zipfile.is_zipfile(archive):
+        if not _PAYLOAD:
+            tmp = Path(tempfile.mkdtemp(prefix="agentkit-payload-"))
+            with zipfile.ZipFile(archive) as z:
+                for name in z.namelist():
+                    if name.startswith("payload/") and not name.endswith("/"):
+                        dest = tmp / name[len("payload/"):]
+                        dest.parent.mkdir(parents=True, exist_ok=True)
+                        dest.write_bytes(z.read(name))
+            _PAYLOAD.append(tmp)
+        return _PAYLOAD[0]
+    return KIT_ROOT
 LOCK = ".agentkit/lock.json"
 BASE_DIR = ".agentkit/base"
 IGNORE = ".agentkit/ignore"
@@ -134,7 +158,14 @@ class Kit:
     def read_text(self, rel):
         return (self.root / rel).read_text(encoding="utf-8")
 
+    def release_label(self):
+        v = self.root / "VERSION"
+        return f"release:{v.read_text().strip()}" if v.exists() else str(self.root)
+
     def version(self):
+        v = self.root / "VERSION"          # written into a release zipapp's payload
+        if v.exists():
+            return v.read_text().strip()
         p = self.root / ".release-please-manifest.json"
         base = "0.0.0"
         if p.exists():
@@ -170,10 +201,17 @@ class Kit:
         return out
 
 
-def open_source(src, ref=None):
-    """Return (Kit, cleanup)."""
+def open_source(src, ref=None, fallback=None):
+    """Return (Kit, cleanup). Without --from: the running kit, else the lock's recorded source."""
     if not src:
-        return Kit(KIT_ROOT), lambda: None
+        root = running_kit_root()
+        if (root / "kit.json").exists():
+            return Kit(root, label=Kit(root).release_label()), lambda: None
+        if fallback and not str(fallback).startswith("release:"):
+            return open_source(fallback, ref)
+        raise SystemExit(
+            "no kit source here. This repository was installed from a release (or the recorded source is gone): "
+            "run the newer `agentkit` (`mise upgrade agentkit`), or pass --from <kit clone or git URL>.")
     if "://" in src or src.startswith("git@"):
         tmp = tempfile.mkdtemp(prefix="agentkit-")
         cmd = ["git", "clone", "-q", "--depth", "1"] + (["--branch", ref] if ref else []) + [src, tmp]
@@ -355,11 +393,17 @@ def cmd_install(args):
 
 
 def classify(target, lock, entries):
-    """Per locked entry: state in clean | local-edited | kit-changed | both | deleted | new."""
-    rows, by_dst = [], {e["dst"]: e for e in entries}
+    """Per locked entry: state in clean | local-edited | kit-changed | both | deleted | new.
+
+    With entries=None (no kit source available) only local edits and deletions can be told."""
+    rows, by_dst = [], {e["dst"]: e for e in (entries or [])}
     for dst, rec in sorted(lock["files"].items()):
         e = by_dst.get(dst)
         local = target.local_sha(dst, rec["class"])
+        if entries is None:
+            rows.append((dst, rec["class"], "deleted" if local is None else
+                         "local-edited" if local != rec["sha"] else "clean"))
+            continue
         if e is None:
             rows.append((dst, rec["class"], "removed-upstream"))
             continue
@@ -382,10 +426,19 @@ def cmd_status(args):
     lock = target.lock()
     if not lock:
         raise SystemExit("agentkit is not installed here: run `install`")
-    kit, cleanup = open_source(args.source or lock.get("source"), args.ref)
+    note = None
     try:
-        rows = classify(target, lock, kit.entries([f for f in lock["features"] if f != "core"]))
-        print(f"installed {lock['version']}  kit {kit.version()}  features {lock['features']}")
+        kit, cleanup = open_source(args.source, args.ref, fallback=lock.get("source"))
+    except SystemExit as e:
+        kit, cleanup, note = None, (lambda: None), str(e)
+    try:
+        if kit is None:
+            rows = classify(target, lock, None)
+            print(f"installed {lock['version']}  features {lock['features']}")
+            print(f"note: kit changes cannot be shown ({note})")
+        else:
+            rows = classify(target, lock, kit.entries([f for f in lock["features"] if f != "core"]))
+            print(f"installed {lock['version']}  kit {kit.version()}  features {lock['features']}")
         counts = {}
         for dst, cls, state in rows:
             counts[state] = counts.get(state, 0) + 1
@@ -402,7 +455,7 @@ def cmd_update(args):
     lock = target.lock()
     if not lock:
         raise SystemExit("agentkit is not installed here: run `install`")
-    kit, cleanup = open_source(args.source or lock.get("source"), args.ref)
+    kit, cleanup = open_source(args.source, args.ref, fallback=lock.get("source"))
     try:
         scopes = ALL_SCOPES if "all" in args.scopes else (args.scopes or DEFAULT_UPDATE_SCOPES)
         bad = [s for s in scopes if s not in ALL_SCOPES]
@@ -573,7 +626,7 @@ def cmd_reconcile(args):
         print("reconcile: no conflicted files")
         return 0
     role_p = target.path(".agents/roles/integrator.md")
-    role = role_p.read_text(encoding="utf-8") if role_p.exists() else (KIT_ROOT / ".agents/roles/integrator.md").read_text()
+    role = role_p.read_text(encoding="utf-8") if role_p.exists() else (running_kit_root() / ".agents/roles/integrator.md").read_text()
     ctx_p = target.path("CONTEXT.md")
     context = ctx_p.read_text(encoding="utf-8") if ctx_p.exists() else "(no CONTEXT.md)"
     briefs = {}
@@ -689,5 +742,9 @@ def main(argv=None):
     return args.fn(args)
 
 
-if __name__ == "__main__":
+def cli_entry():
     sys.exit(main())
+
+
+if __name__ == "__main__":
+    cli_entry()

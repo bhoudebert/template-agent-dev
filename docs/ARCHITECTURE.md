@@ -169,6 +169,20 @@ Skipping never removes the **evidence floor** (`tools/evidence.py`): from `imple
 include a changed spec or a changed test, or an explicit `skip: [tests]` waiver with a reason. It is verified
 from git, not from what an agent says, and runs locally (`mise run evidence`, `ship`) and in CI.
 
+## Kit distribution and updates
+
+`kit.json` lists what the kit installs into another repository; `tools/agentkit.py` applies it. Both are plain
+files: no service, no dependency beyond git.
+
+| Piece | Design |
+|---|---|
+| **Classes** | managed (overwritten), tailorable (3-way merged), block (marked region of a shared file), side (placed next to the project's own, so its `mise.toml` is never edited), seed (copied once). |
+| **Lock** | `.agentkit/lock.json` records the version and, per file, class, scope and the hash installed. It is how `status` tells "you edited it" from "the kit changed it". Tailorable and block files also keep their installed copy under `.agentkit/base/` so a merge never needs the network. |
+| **Always a PR** | install and update write on a branch, in one commit, and push nothing. |
+| **Conflicts** | `git merge-file --diff3` keeps the base in the markers. They are listed in `.agentkit/CHANGES.md`, detected only as exact marker lines (so docs that mention them are not flagged), and resolved by `reconcile`. |
+| **reconcile** | a model gets the file with markers, the `integrator` role and `CONTEXT.md`; the reply is validated (no markers, non-empty, JSON/TOML parse) before it is written, and lines of yours missing from the result are reported. Without a model: `--brief` for an assistant, or edit by hand. |
+| **Release asset** | `tools/build_pyz.py` builds one executable zipapp holding the engine and the payload; the release workflow attaches it with a checksum. Updating is "get the newer file, run `agentkit update`": no clone, reproducible per version. |
+
 ## The review design
 
 The reviewer is a normal stage (`review`) whose input is `@diff`. Two decisions make it useful.

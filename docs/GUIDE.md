@@ -201,6 +201,35 @@ mise run kit:update tools                                # only tools, hooks, sc
 mise run kit:update ci                                   # CI is refreshed only when you ask
 ```
 
+### From a release (no clone)
+
+Every release carries one executable file, `agentkit.pyz`: the engine plus the exact kit payload of that
+version, with a `.sha256` next to it. Nothing is cloned and nothing is fetched at install or update time.
+
+```sh
+# put it on your PATH (check the .sha256 first if you like)
+curl -fsSL -o ~/.local/bin/agentkit \
+  https://github.com/<owner>/<repo>/releases/latest/download/agentkit.pyz && chmod +x ~/.local/bin/agentkit
+# or let mise manage it (confirm the asset is detected on your first release)
+mise use -g "github:<owner>/<repo>@latest"
+
+cd my-repo
+agentkit install --with ci          # branch + one commit
+agentkit status
+# later
+mise upgrade agentkit               # or re-download
+agentkit update --plan && agentkit update
+agentkit reconcile                  # a model resolves any conflicted file; --brief for your assistant instead
+```
+
+An adopting repo also carries its own `tools/agentkit.py` (so `mise run kit:status` works offline), but it has
+no kit beside it: to *update*, run the newer `agentkit` (or pass `--from <clone or git URL>`).
+
+When an update leaves conflicts, `agentkit reconcile` gives a model (any configured provider) the diff3 markers,
+the `integrator` role and your `CONTEXT.md`, then validates the answer (no markers left, JSON/TOML parse) and lists
+any of your lines missing from the result. A bad reply leaves the file untouched; `--brief` writes
+`.agentkit/reconcile/*.md` for an assistant instead. You always review the result as a diff.
+
 What happens to each kind of file:
 
 | Class | Examples | On update |
