@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PAGES = [  # (slug, source file, nav title)
+    ("tutorial", "TUTORIAL.md", "Tutorial"),
     ("workflow", "WORKFLOW.md", "Workflow"),
     ("guide", "GUIDE.md", "Guide"),
     ("architecture", "ARCHITECTURE.md", "Architecture"),
@@ -84,7 +85,7 @@ def render(md):
             text = line[level:].strip()
             hid = slugify(text)
             if level in (2, 3):
-                toc.append((level, hid, re.sub(r"`", "", text)))
+                toc.append((level, hid, re.sub(r"[`*]", "", text)))
             out.append(f'<h{level} id="{hid}">{inline(text)}</h{level}>')
             i += 1
         elif line.startswith("|") and i + 1 < len(lines) and re.match(r"^\|[\s:|-]+\|?\s*$", lines[i + 1]):

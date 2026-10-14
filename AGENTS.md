@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Entry point for any coding agent or LLM working in this repo (Codex, Copilot, Claude, Cursor, local models...).
-Humans: see README.md and docs/GUIDE.md.
+Humans: see README.md, docs/TUTORIAL.md and docs/GUIDE.md.
 
 ## How work flows
 

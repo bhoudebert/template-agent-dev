@@ -10,6 +10,8 @@ Short commands: `mise tasks` (see GUIDE section 0).
 
 **Start here: [docs/GUIDE.md](docs/GUIDE.md)** (setup, walkthrough, troubleshooting).
 
+**First time? Follow [docs/TUTORIAL.md](docs/TUTORIAL.md)**: one Node.js story end to end, every manual and automated step.
+
 More: [docs/WORKFLOW.md](docs/WORKFLOW.md) (who does what, when), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/REFERENCE.md](docs/REFERENCE.md). Browse them as a website: `mise run site` (open http://localhost:8000).
 
 ## Layers
