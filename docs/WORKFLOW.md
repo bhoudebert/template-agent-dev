@@ -82,7 +82,9 @@ This is a loop, not a step. See [the developer loop](#the-developer-loop).
 
 ### 7. Review (reviewer) and merge
 - **Agent**: runs on the PR in CI (`agent-review`, only when a model is configured there), or locally with `mise run review` (the whole PR against its base branch; `--post` to comment on the PR, `--commit` for just the last commit). One comment, findings ranked blocker/major/minor/nit.
-- **Check**: you are the reviewer; the agent is a second pair of eyes. Fix blockers.
+- **Scope**: the whole PR (every commit against its real base branch), not just the latest push. `--commit` reviews only the last commit and is never posted.
+- **The comment**: one comment per author, updated in place on every run; yours and others' comments are never overwritten.
+- **Check**: you are the reviewer; the agent is a second pair of eyes that is sometimes wrong. Verify each finding, fix what is real.
 - **After**: squash-merge into `main`. The PR title is the commit and must be a Conventional Commit, e.g. `feat(US-002): export invoices as CSV`.
 
 ### 8. Release

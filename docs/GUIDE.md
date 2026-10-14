@@ -156,10 +156,15 @@ Implementation is iterative: `run implement` works the next unchecked tasks in `
 
 ### Review a PR
 ```sh
-export AGENT_BASE_REF=origin/main
-python3 tools/agentrun.py run review --id US-002 --apply
-cat .agents/out/review-US-002.md          # post as PR comment manually, or use the GitHub workflow
+mise run review            # the WHOLE PR: all its commits vs its base branch (+ uncommitted), printed
+mise run review --post     # same, and create/update THE review comment on the open PR
+mise run review --commit   # only the last commit (never posted)
 ```
+
+- **Scope**: the base is the PR's real base branch (read via `gh`), so a stacked PR is not reviewed together with its parent. Override with `AGENT_BASE_REF`.
+- **One comment**: `--post` and CI update a single marked comment in place; they never add a second one and never touch your own comments. A failing comment lookup is an error, not a new comment.
+- **Reviewing before you commit**: uncommitted changes to tracked files are included. New untracked files are not until you `git add` them.
+- **It is advice**: it can miss things and can report things that are not there. Verify before acting.
 
 ### Production incident
 ```sh
@@ -219,6 +224,8 @@ adapters/install.sh github tools
 | Symptom | Cause / fix |
 |---|---|
 | `validate`: `file name must be ...` | the file name must start with its `id` (or `story`): rename the file, e.g. `ADR-0003-use-queue.md`, `US-012.md`. Existing projects adopting the template: run `mise run validate` once and rename what it lists |
+| review comment not posted: `cannot list comments` | `gh` is not authenticated or lacks `pull-requests: write`. Nothing is posted on purpose (a failed lookup must not create duplicates) |
+| `agent-review` check shows "skipped" | no model configured for CI; set the repository variables (section 4) |
 | exit 3 `no model set` | export `AGENT_MODEL` (or `_STRONG/_CHEAP`) |
 | exit 3 `model returned no text` | a thinking model spent its whole budget reasoning (minutes, empty answer). Set `AGENT_REASONING_EFFORT=none` (or `low`) and `AGENT_MAX_TOKENS=16000`, or use a non-thinking model |
 | exit 3 `openai provider failed` | wrong `AGENT_BASE_URL`, server down, or timeout (`AGENT_TIMEOUT` seconds) |

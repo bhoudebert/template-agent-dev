@@ -20,7 +20,9 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `agent:test` | `<id> [--dry\|--plan]` | Run the test-engineer stage |
 | `agent` | `<stage> <id> [--dry\|--plan]` | Run any stage |
 | `check` | | `validate` + `trace` + `test` |
-| `validate` `trace` `test` | | One deterministic check each |
+| `test` | | The **project's** tests: auto-detects `npm test`, pytest, `go test`, `cargo test`, `mvn test` (`tools/projecttest.sh`) |
+| `test:tools` | | The template's own tool tests (`tools/tests`) |
+| `validate` `trace` | | One deterministic check each |
 | `doctor` | | Python, git, endpoint, model served |
 | `env` | | Show `AGENT_*` (keys masked) |
 | `stages` | | List pipeline stages |
@@ -29,6 +31,18 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `site` | | Build and serve this documentation website |
 
 Stage flags: no flag = call the model, write files, run checks. `--plan` = call the model, write nothing. `--dry` = print the prompt only.
+
+### Review scope and comment (details of `review`)
+
+| Command | Reviewed | Posted |
+|---|---|---|
+| `mise run review` | all commits of the branch vs the PR's base branch (from `gh`), plus uncommitted tracked changes | no |
+| `mise run review --post` | same | one comment on the open PR, updated in place |
+| `mise run review --commit` | `HEAD` only | no |
+| `mise run review --post --commit` | refused | |
+| `AGENT_BASE_REF=<ref> mise run review` | all commits vs `<ref>` | no |
+
+The comment starts with the hidden marker `<!-- agent-review:v1 -->` and names the reviewed commit and scope. Only the current author's marked comment is updated; human comments are never touched. See [ARCHITECTURE.md](ARCHITECTURE.md) for the algorithm and failure modes.
 
 ## Environment variables
 
@@ -122,6 +136,22 @@ stages:
 File names must match the artifact: `US-001.md`, `ADR-0001-<slug>.md`, `INC-001.md`, `RB-001-<slug>.md`; design, QA and release-notes files are named after their story (`US-001.md`). `validate` rejects a file whose name does not start with its `id` (or `story`).
 
 Enums: story `status` = draft, enriched, approved, specified, designed, implemented, done. ADR `status` = proposed, accepted, superseded, rejected. QA `verdict` = pass, fail, blocked. Incident `severity` = sev1..sev4, `status` = open, mitigated, resolved. A story in `draft` is only frontmatter-checked.
+
+## What `validate` and `trace_check` enforce
+
+| Rule | Check |
+|---|---|
+| Frontmatter keys, enums, id patterns | schema in `.agents/schemas/<type>.json` |
+| Required sections present and non-empty | schema `sections` |
+| Acceptance criteria contain Given/When/Then | schema `section_patterns` |
+| File name starts with `id` (or `story`) | schema `filename_starts_with` |
+| Raw `draft` story: frontmatter only | schema `relaxed_when` |
+| Files cited in a QA report exist | `validate` |
+| OpenSpec: no frontmatter, proposal sections, tasks, `SHALL`/`MUST`, `#### Scenario:` | `check_change` |
+| `>= specified` needs `openspec/changes/<id>/`; `>= designed` needs an ADR or design; `done` needs a QA report with `verdict: pass` | `trace_check` |
+| Every ADR, design and QA report points at an existing story | `trace_check` |
+
+Scanned: every `*.md` except `.agents`, `tools`, `tests`, `evals`, `adapters`, `examples` **at the repository root**, and `.git`, `node_modules`, `.venv`, `__pycache__` anywhere.
 
 ## OpenSpec change rules
 
