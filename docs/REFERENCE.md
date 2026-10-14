@@ -119,6 +119,8 @@ stages:
 | `runbook` | id (`RB-NNN`), type, title, date | When to use, Symptoms, Steps, Verification, Rollback |
 | `release-notes` | type, story, date, bump | Added, Changed, Fixed, Security, Go/No-Go checklist |
 
+File names must match the artifact: `US-001.md`, `ADR-0001-<slug>.md`, `INC-001.md`, `RB-001-<slug>.md`; design, QA and release-notes files are named after their story (`US-001.md`). `validate` rejects a file whose name does not start with its `id` (or `story`).
+
 Enums: story `status` = draft, enriched, approved, specified, designed, implemented, done. ADR `status` = proposed, accepted, superseded, rejected. QA `verdict` = pass, fail, blocked. Incident `severity` = sev1..sev4, `status` = open, mitigated, resolved. A story in `draft` is only frontmatter-checked.
 
 ## OpenSpec change rules

@@ -61,7 +61,10 @@ class Validate(unittest.TestCase):
     def test_every_template_satisfies_its_schema(self):
         tmp = sandbox()
         for tpl in sorted((ROOT / ".agents" / "templates").glob("*.md")):
-            target = tmp / "docs" / "tmp" / tpl.name
+            import miniyaml as _y
+            meta, _ = _y.split_frontmatter(tpl.read_text())
+            stem = str(meta.get("id") or meta.get("story"))
+            target = tmp / "docs" / "tmp" / f"{stem}-{tpl.stem}.md"
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(tpl.read_text())
             self.assertEqual(validate.check_file(target, tmp), [], tpl.name)
@@ -98,6 +101,15 @@ class Validate(unittest.TestCase):
         errs = validate.scan(tmp)
         self.assertTrue(any("docs/examples/US-778.md" in e for e in errs), errs)
         self.assertFalse(any("US-777" in e or "US-779" in e for e in errs), errs)
+
+    def test_file_name_must_match_id(self):
+        tmp = sandbox()
+        p = tmp / "docs/stories/US-002.md"
+        p.write_text("---\nid: US-001\ntype: story\ntitle: x\nstatus: draft\nowner: po\n---\nraw\n")
+        self.assertTrue(any("file name must be" in e for e in validate.check_file(p, tmp)))
+        ok = tmp / "docs/decisions/ADR-0002-some-slug.md"
+        ok.write_text((tmp / "docs/decisions/ADR-0001-hash-reset-tokens.md").read_text().replace("ADR-0001", "ADR-0002"))
+        self.assertEqual(validate.check_file(ok, tmp), [])
 
     def test_worked_example_is_valid(self):
         tmp = sandbox()

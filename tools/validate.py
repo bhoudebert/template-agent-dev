@@ -61,6 +61,12 @@ def check_file(path, root=ROOT):
     for key, pattern in fm.get("patterns", {}).items():
         if key in meta and not re.match(pattern, str(meta[key])):
             errs.append(f"{rel}: `{key}`={meta[key]!r} does not match {pattern}")
+    fname_key = schema.get("filename_starts_with")
+    if fname_key and meta.get(fname_key):
+        want = str(meta[fname_key])
+        name = Path(path).name
+        if name != f"{want}.md" and not name.startswith(f"{want}-"):
+            errs.append(f"{rel}: file name must be `{want}.md` or `{want}-<slug>.md` (frontmatter {fname_key}: {want})")
     relaxed = schema.get("relaxed_when", {})
     if relaxed and all(meta.get(k) == v for k, v in relaxed.items()):
         return errs  # e.g. raw draft story: only frontmatter is enforced

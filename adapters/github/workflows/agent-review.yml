@@ -16,6 +16,10 @@ on:
 permissions:
   contents: read
   pull-requests: write
+concurrency:
+  # one review per PR at a time; a newer push cancels the stale run (also avoids duplicate comments)
+  group: agent-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 jobs:
   review:
     runs-on: ubuntu-latest

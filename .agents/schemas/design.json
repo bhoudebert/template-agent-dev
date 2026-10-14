@@ -1,8 +1,28 @@
 {
   "frontmatter": {
-    "required": ["id", "type", "title", "status", "story"],
-    "enums": {"status": ["draft", "approved"]},
-    "patterns": {"story": "^US-\\d{3,}$"}
+    "required": [
+      "id",
+      "type",
+      "title",
+      "status",
+      "story"
+    ],
+    "enums": {
+      "status": [
+        "draft",
+        "approved"
+      ]
+    },
+    "patterns": {
+      "story": "^US-\\d{3,}$"
+    }
   },
-  "sections": ["Overview", "Components", "Data and interfaces", "Risks", "Test strategy"]
+  "sections": [
+    "Overview",
+    "Components",
+    "Data and interfaces",
+    "Risks",
+    "Test strategy"
+  ],
+  "filename_starts_with": "story"
 }
