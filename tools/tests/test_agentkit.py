@@ -246,6 +246,58 @@ class Uninstall(unittest.TestCase):
         self.assertEqual(git(d, "branch", "--show-current").stdout.strip(), "main")
 
 
+class Guidance(unittest.TestCase):
+    def run_cli(self, *args):
+        import io
+        from contextlib import redirect_stdout
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = cli(*args)
+        return rc, buf.getvalue()
+
+    def test_version_prints_release(self):
+        rc, out = self.run_cli("version")
+        self.assertEqual(rc, 0)
+        self.assertRegex(out, r"^agentkit \d+\.\d+\.\d+")
+        rc, out = self.run_cli("--version")
+        self.assertRegex(out, r"^agentkit \d+\.\d+\.\d+")
+
+    def test_install_says_branch_and_next_steps(self):
+        d = host_repo()
+        rc, out = self.run_cli("install", "--target", d)
+        self.assertEqual(rc, 0)
+        self.assertIn("new branch `chore/agentkit-install`", out)
+        self.assertIn("Nothing is pushed", out)
+        self.assertIn("git show --stat HEAD", out)
+        self.assertIn("no git remote yet", out)        # host_repo has no remote
+        self.assertIn("mise run hooks", out)
+        self.assertIn("CONTEXT.md", out)
+
+    def test_plan_says_nothing_written(self):
+        d = host_repo()
+        rc, out = self.run_cli("install", "--plan", "--target", d)
+        self.assertEqual(rc, 0)
+        self.assertIn("nothing was written", out)
+        self.assertFalse((d / ".agentkit").exists())
+
+    def test_confirm_declined_writes_nothing(self):
+        d = host_repo()
+        from unittest import mock
+        with mock.patch("sys.stdin.isatty", return_value=True), mock.patch("builtins.input", return_value="n"):
+            with self.assertRaises(SystemExit):
+                self.run_cli("install", "--target", d)
+        self.assertFalse((d / ".agentkit").exists())
+        self.assertEqual(git(d, "branch", "--show-current").stdout.strip(), "main")
+
+    def test_yes_skips_prompt(self):
+        d = host_repo()
+        from unittest import mock
+        with mock.patch("sys.stdin.isatty", return_value=True), \
+                mock.patch("builtins.input", side_effect=AssertionError("prompted")):
+            rc, _ = self.run_cli("install", "--yes", "--target", d)
+        self.assertEqual(rc, 0)
+
+
 class KitCompleteness(unittest.TestCase):
     def test_every_tool_is_shipped_or_deliberately_not(self):
         k = agentkit.Kit(ROOT)
