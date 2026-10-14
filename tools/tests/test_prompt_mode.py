@@ -263,6 +263,95 @@ class Evidence(unittest.TestCase):
         self.assertTrue(any("skip_reason" in e for e in validate.check_file(p, d)))
 
 
+BUG = ("---\nid: US-001\ntype: story\nkind: bug\ntitle: Totals wrong\nstatus: enriched\nowner: po\n---\n"
+       "## Symptom\nTotal is off by VAT.\n## Expected behaviour\nRequirement: totals include VAT.\n"
+       "## Reproduction\n1. Add an item.\n## Acceptance criteria\n- Given an item, when totals are shown, then VAT is included.\n"
+       "## Out of scope\n- Rounding.\n## Open questions\n- None\n")
+
+
+class BugStory(unittest.TestCase):
+    def test_bug_story_uses_bug_sections(self):
+        d = sandbox()
+        p = d / "docs/stories/US-009.md"
+        p.write_text(BUG.replace("US-001", "US-009"))
+        self.assertEqual(validate.check_file(p, d), [])
+        p.write_text(BUG.replace("US-001", "US-009").replace("## Reproduction\n1. Add an item.\n", ""))
+        self.assertTrue(any("Reproduction" in e for e in validate.check_file(p, d)))
+
+    def test_new_bug_is_a_story_with_its_own_placeholder(self):
+        import agentrun
+        d = Path(tempfile.mkdtemp())
+        import shutil
+        shutil.copytree(ROOT / ".agents", d / ".agents")
+        sid, path = items.new_story("Totals wrong", root=d, kind="bug")
+        self.assertIn("kind: bug", path.read_text())
+        self.assertTrue(sid.startswith("US-"))                   # same id space: no blame category
+        probs = agentrun.preflight("story", sid, d)
+        self.assertTrue(probs and "no request yet" in probs[0])  # the bug placeholder counts as empty
+        path.write_text(path.read_text().replace(items.PLACEHOLDER_BUG, "Totals ignore VAT on invoices over 100."))
+        self.assertEqual(agentrun.preflight("story", sid, d), [])
+
+    def test_story_stage_swaps_in_the_bug_template(self):
+        import agentrun
+        d = sandbox()
+        (d / "docs/stories/US-001.md").write_text(BUG)
+        stage = agentrun.find_stage(agentrun.load_pipeline(d), "story")
+        _, user, _ = agentrun.build_prompt(stage, "US-001", d)
+        self.assertIn("# Template `story-bug`", user)
+        self.assertNotIn("# Template `story`", user)
+
+
+class Emergency(unittest.TestCase):
+    def broken_repo(self):
+        import shutil
+        d = Path(tempfile.mkdtemp())
+        shutil.copytree(ROOT / "tools", d / "tools", ignore=shutil.ignore_patterns("tests", "__pycache__"))
+        shutil.copytree(ROOT / ".agents", d / ".agents")
+        for n in ("AGENTS.md", "CONTEXT.md"):
+            shutil.copy(ROOT / n, d / n)
+        git(d, "init", "-q", "-b", "main"); git(d, "add", "-A"); git(d, "commit", "-q", "-m", "init")
+        git(d, "switch", "-q", "-c", "fix/ci-broken")
+        (d / "x.txt").write_text("fix"); git(d, "add", "-A"); git(d, "commit", "-q", "-m", "fix(ci): repair the pipeline")
+        return d   # no tools/tests and no project tests: the test step cannot pass
+
+    def ship(self, d, *args):
+        import os
+        env = dict(os.environ, SHIP_PLAN_ONLY="1")
+        return subprocess.run(["sh", "tools/ship.sh", *args], cwd=d, env=env, text=True, capture_output=True)
+
+    def test_a_broken_check_blocks_a_normal_ship_and_points_to_emergency(self):
+        d = self.broken_repo()
+        r = self.ship(d, "main", "", "")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("mise run ship --emergency", r.stderr)
+
+    def test_emergency_skips_the_broken_checks_but_not_the_rules(self):
+        d = self.broken_repo()
+        r = self.ship(d, "main", "", "true")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("EMERGENCY", r.stderr)
+        self.assertIn("plan: would push 'fix/ci-broken'", r.stdout)
+        # never main, even in an emergency
+        git(d, "switch", "-q", "main")
+        r = self.ship(d, "main", "", "true")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("always a branch and a PR", r.stderr)
+        # and no assistant names, even in an emergency
+        git(d, "switch", "-q", "fix/ci-broken")
+        (d / "y.txt").write_text("y"); git(d, "add", "-A"); git(d, "commit", "-q", "-m", "fix: via Claude")
+        r = self.ship(d, "main", "", "true")
+        self.assertNotEqual(r.returncode, 0)
+
+    def test_pre_push_hook_refuses_main_only(self):
+        hook = str(ROOT / ".githooks" / "pre-push")
+        z = "0" * 40
+        ok = subprocess.run(["sh", hook], input=f"refs/heads/fix/x {z} refs/heads/fix/x {z}\n", text=True, capture_output=True)
+        self.assertEqual(ok.returncode, 0)
+        bad = subprocess.run(["sh", hook], input=f"refs/heads/fix/x {z} refs/heads/main {z}\n", text=True, capture_output=True)
+        self.assertNotEqual(bad.returncode, 0)
+        self.assertIn("refusing to push to main", bad.stderr)
+
+
 class Preflight(unittest.TestCase):
     def test_story_stage_refuses_an_empty_request(self):
         d = Path(tempfile.mkdtemp())

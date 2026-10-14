@@ -79,7 +79,10 @@ def check_file(path, root=ROOT):
         if skip and not meta.get("skip_reason"):
             errs.append(f"{rel}: `skip` needs a `skip_reason` (say why this story needs no spec/design/tests)")
     secs = _sections(body)
-    for name in schema.get("sections", []):
+    variant = (schema.get("kinds") or {}).get(meta.get("kind"))
+    required = variant["sections"] if variant else schema.get("sections", [])
+    patterns = variant.get("section_patterns", {}) if variant else schema.get("section_patterns", {})
+    for name in required:
         if name.lower() not in secs:
             errs.append(f"{rel}: missing section `## {name}`")
         elif not secs[name.lower()].strip():
@@ -88,7 +91,7 @@ def check_file(path, root=ROOT):
         for token in re.findall(r"`([^`\s]+\.[A-Za-z0-9]+)`", secs.get("traceability", "")):
             if "/" in token and not (Path(root) / token).exists():
                 errs.append(f"{rel}: cited evidence file does not exist: {token}")
-    for name, pattern in schema.get("section_patterns", {}).items():
+    for name, pattern in patterns.items():
         text = secs.get(name.lower(), "")
         if text.strip() and not re.search(pattern, text):
             errs.append(f"{rel}: section `## {name}` must match /{pattern}/")

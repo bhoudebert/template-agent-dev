@@ -138,6 +138,29 @@ Rules of thumb:
 - If the agent keeps failing the same way, the task is too big. Split it in `tasks.md`.
 - Never ask the agent to "make the tests pass" by editing tests. Reject that diff.
 
+## Bugs and emergencies
+
+**A bug is a story.** Same `US-NNN` ids, same ladder, no separate "bug" category and nothing to learn. A story
+may carry `kind: bug`, which only changes its shape: Symptom, Expected behaviour, Reproduction.
+
+| Situation | What you do |
+|---|---|
+| **Bug that can wait**, spec already correct | `mise run new "Totals ignore VAT" --bug --text "..."`, then `mise run skip US-NNN spec,design --reason "spec already correct"`. The evidence floor asks for a **non-regression test**. Ship as `fix(US-NNN): ...` (a patch release). Otherwise it flows like any story. |
+| **Bug where the spec was silent or wrong** | Same story, but do not skip the spec: add or modify the requirement and scenario in the change. If it is really a change of mind about behaviour, it is an ordinary feature story. |
+| **Emergency**: CI is broken, production is down | No story needed. `git switch -c fix/<what-is-broken>`, fix it, `mise run ship --emergency`, review it yourself, merge. |
+
+What the emergency path relaxes and what it never does:
+
+| Relaxed | Never relaxed |
+|---|---|
+| validate, trace, tests and the evidence floor (so a broken pipeline cannot block the fix) | Never push to `main`: a branch and a PR, always. `ship` refuses and a `pre-push` hook (`mise run hooks`) refuses. |
+| Story, spec, design, ids: `Refs: none` is fine | No assistant or tool names in history |
+| Who reviews: self-review and self-merge are fine | A Conventional Commit title, e.g. `fix(ci): repair the lint step` |
+
+Afterwards, if it deserves a record, create a story (`mise run new "..." --bug`) and add the non-regression test.
+If the tool is ever in your way, do it by hand: a branch, a PR and a `fix:` title are all the rules require.
+CI may be red when CI itself is what is broken; merging anyway is your call as the repository owner.
+
 ## Branches, commits, versions
 
 | Thing | Convention |

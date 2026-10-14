@@ -7,6 +7,7 @@ Rules
 - Tests ship with code; each touched scenario gets a test named after it.
 - No unrelated refactors, no new dependencies without an ADR.
 - Check off finished tasks in tasks.md; leave blocked ones with a note.
+- `kind: bug`: write the non-regression test first and see it fail, then fix. If the expected behaviour was not specified, add the requirement and scenario in the same change.
 - Never put secrets, tokens or real data in code or tests.
 - Commit as Conventional Commits with the story id as scope, on the story's `feature/<US-id>-<slug>` branch.
 
