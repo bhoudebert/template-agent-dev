@@ -56,7 +56,9 @@ class TestCommand(unittest.TestCase):
         (d / ".agents").mkdir()
         (d / ".agents/pipeline.yaml").write_text("commands:\n  test: \"echo RAN-CONFIGURED\"\nstages: []\n")
         r = subprocess.run(["sh", "tools/projecttest.sh"], cwd=d, text=True, capture_output=True)
-        self.assertEqual(r.stdout.strip(), "RAN-CONFIGURED")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("commands.test in .agents/pipeline.yaml", r.stdout)     # says where it came from
+        self.assertEqual(r.stdout.strip().splitlines()[-1], "RAN-CONFIGURED")  # and ran it
         (d / ".agents/pipeline.yaml").write_text("stages: []\n")
         r = subprocess.run(["sh", "tools/projecttest.sh"], cwd=d, text=True, capture_output=True)
         self.assertNotEqual(r.returncode, 0)
