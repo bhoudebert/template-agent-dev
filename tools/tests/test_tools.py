@@ -251,6 +251,47 @@ class Diff(unittest.TestCase):
         self.assertTrue((d / ".agents/out/review-US-042.md").exists())
 
 
+class PostReview(unittest.TestCase):
+    """post_review.sh against a fake `gh` that logs its calls."""
+
+    def run_script(self, existing_id):
+        import subprocess
+        d = Path(tempfile.mkdtemp())
+        log = d / "calls.log"
+        bin_dir = d / "bin"
+        bin_dir.mkdir()
+        fake = bin_dir / "gh"
+        fake.write_text(f"""#!/bin/sh
+echo "$@" >> {log}
+case "$1 $2" in
+  "repo view") echo "o/r" ;;
+  "api user") echo "me" ;;
+  "api --paginate") echo "{existing_id}" ;;
+esac
+exit 0
+""")
+        fake.chmod(0o755)
+        review = d / "review.md"
+        review.write_text("# Review: PR-8\n\n## Findings\n- x\n")
+        env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+        proc = subprocess.run(["sh", str(ROOT / "tools/post_review.sh"), str(review), "8"],
+                              cwd=ROOT, env=env, capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        return log.read_text(), proc.stdout
+
+    def test_updates_existing_comment_instead_of_adding(self):
+        calls, out = self.run_script("12345")
+        self.assertIn("-X PATCH repos/o/r/issues/comments/12345", calls)
+        self.assertNotIn("pr comment", calls)
+        self.assertIn("updated", out)
+
+    def test_creates_when_none_exists(self):
+        calls, out = self.run_script("")
+        self.assertIn("pr comment 8 --body-file", calls)
+        self.assertNotIn("PATCH", calls)
+        self.assertIn("created", out)
+
+
 class Branch(unittest.TestCase):
     def test_branch_name(self):
         import items

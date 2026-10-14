@@ -32,5 +32,5 @@ echo
 echo "================ $out ================"
 cat "$out"
 if [ "$2" = "true" ]; then
-  gh pr comment --body-file "$out"
+  sh tools/post_review.sh "$out"
 fi
