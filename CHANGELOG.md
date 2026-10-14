@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/bhoudebert/template-agent-dev/compare/v0.1.0...v0.1.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **release:** publish per-platform archives so mise detects the asset ([#22](https://github.com/bhoudebert/template-agent-dev/issues/22)) ([2c5f64d](https://github.com/bhoudebert/template-agent-dev/commit/2c5f64d998da9fdd8f52819a91d3b0791c5761e6))
+
 ## 0.1.0 (2026-10-14)
 
 
