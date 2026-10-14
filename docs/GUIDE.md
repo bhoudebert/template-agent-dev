@@ -184,7 +184,17 @@ Output is a ranked hypothesis list and recommended actions. A human executes any
 adapters/install.sh github tools
 ```
 - Copies workflows to `.github/workflows/`: `ci.yml` (PR title check, validate, trace, tests), `release-please.yml`, `agent-review.yml` (comments on PRs), `agent-triage.yml` (label an issue `agent:enrich` -> PR with enriched story).
-- Add repo secret `AGENT_API_KEY` and variables `AGENT_BASE_URL`, `AGENT_MODEL_STRONG`, `AGENT_MODEL_CHEAP`.
+- Configure the model in **Settings > Secrets and variables > Actions**:
+
+  | Kind | Name | Example |
+  |---|---|---|
+  | Variable | `AGENT_BASE_URL` | `https://api.example.com/v1` |
+  | Variable | `AGENT_MODEL_STRONG`, `AGENT_MODEL_CHEAP` | your model ids |
+  | Secret | `AGENT_API_KEY` | token for that endpoint |
+  | Variable (optional) | `AGENT_REASONING_EFFORT`, `AGENT_MAX_TOKENS`, `AGENT_PROVIDER`, `AGENT_CMD` | `none`, `16000` |
+
+- **Not configured? The agent workflows skip** with a notice (they do not fail). The deterministic `ci` workflow is independent and always runs.
+- A GitHub-hosted runner cannot reach a model on your own machine (`localhost`). Use a hosted OpenAI-compatible API, or register a self-hosted runner on a machine that can reach your model and set `runs-on: self-hosted`.
 - Local models need a self-hosted runner that can reach them.
 - Name PR branches `feature/US-002-...` so the reviewer finds the story id.
 - These workflows are untested against a real repo. Try on a throwaway repo first; the triage workflow feeds issue text into a shell, review before enabling on public repos.

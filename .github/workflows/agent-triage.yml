@@ -11,11 +11,35 @@ jobs:
   enrich:
     if: github.event.label.name == 'agent:enrich'
     runs-on: ubuntu-latest
+    env:
+      AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'openai' }}
+      AGENT_BASE_URL: ${{ vars.AGENT_BASE_URL }}
+      AGENT_MODEL_CHEAP: ${{ vars.AGENT_MODEL_CHEAP }}
+      AGENT_CMD: ${{ vars.AGENT_CMD }}
+      AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
+      AGENT_REASONING_EFFORT: ${{ vars.AGENT_REASONING_EFFORT }}
+      AGENT_MAX_TOKENS: ${{ vars.AGENT_MAX_TOKENS }}
     steps:
+      - name: Is a model configured?
+        id: cfg
+        run: |
+          missing=""
+          if [ "$AGENT_PROVIDER" = "cmd" ]; then
+            [ -n "$AGENT_CMD" ] || missing="AGENT_CMD"
+          else
+            [ -n "$AGENT_BASE_URL" ] && [ -n "$AGENT_MODEL_CHEAP" ] || missing="AGENT_BASE_URL and AGENT_MODEL_CHEAP"
+          fi
+          if [ -n "$missing" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice title=agent-triage skipped::No model configured (missing $missing). See docs/GUIDE.md (CI)."
+          fi
       - uses: actions/checkout@v4
+        if: steps.cfg.outputs.skip != 'true'
       - uses: actions/setup-python@v5
+        if: steps.cfg.outputs.skip != 'true'
         with: { python-version: "3.12" }
       - name: Seed raw story
+        if: steps.cfg.outputs.skip != 'true'
         env:
           TITLE: ${{ github.event.issue.title }}
           BODY: ${{ github.event.issue.body }}
@@ -29,19 +53,23 @@ jobs:
           } > "docs/stories/$id.md"
           echo "ID=$id" >> "$GITHUB_ENV"
       - name: Enrich
-        env:
-          AGENT_PROVIDER: openai
-          AGENT_BASE_URL: ${{ vars.AGENT_BASE_URL }}
-          AGENT_MODEL_CHEAP: ${{ vars.AGENT_MODEL_CHEAP }}
-          AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
+        if: steps.cfg.outputs.skip != 'true'
         run: python tools/agentrun.py run story --id "$ID" --apply
       - name: Open PR
+        if: steps.cfg.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          NUM: ${{ github.event.issue.number }}
+          ACTOR: ${{ github.actor }}
+          ACTOR_ID: ${{ github.actor_id }}
         run: |
-          git config user.name "agent-bot"; git config user.email "agent-bot@users.noreply.github.com"
-          git checkout -b "agent/$ID-story"
+          # History shows the human who applied the label, never a bot name.
+          # Note: pushes made with GITHUB_TOKEN do not trigger other workflows; re-run CI or push an empty commit.
+          git config user.name "$ACTOR"
+          git config user.email "${ACTOR_ID}+${ACTOR}@users.noreply.github.com"
+          git checkout -b "feature/${ID}-from-issue-${NUM}"
           git add docs/stories
-          git commit -m "docs: enrich $ID from issue #${{ github.event.issue.number }}"
+          git commit -m "docs(${ID}): enrich story from issue #${NUM}"
           git push -u origin HEAD
-          gh pr create --title "$ID: enriched story" --body "Closes #${{ github.event.issue.number }}. Gate: product-owner."
+          gh pr create --base main --title "docs(${ID}): enrich story from issue #${NUM}" \
+            --body "Closes #${NUM}. Gate: product owner reviews the enriched story."

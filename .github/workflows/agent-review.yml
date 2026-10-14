@@ -1,35 +1,72 @@
 # Auto review: runs the `review` stage on the PR diff and posts one comment.
-# Needs repo secret AGENT_API_KEY and variables AGENT_BASE_URL, AGENT_MODEL_STRONG.
-# Story id is taken from the branch name (e.g. feature/US-001-reset) or PR title.
+#
+# Needs a reachable model. Configure in Settings > Secrets and variables > Actions:
+#   Variables: AGENT_BASE_URL, AGENT_MODEL_STRONG   (optional: AGENT_PROVIDER, AGENT_CMD,
+#              AGENT_REASONING_EFFORT, AGENT_MAX_TOKENS)
+#   Secret:    AGENT_API_KEY
+# Without them this workflow SKIPS with a notice instead of failing.
+# A GitHub-hosted runner cannot reach a model on your laptop: use a hosted API or a
+# self-hosted runner.
+#
+# Work item id: US-NNN found in the branch name or PR title, else PR-<number>.
 name: agent-review
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
 permissions:
   contents: read
   pull-requests: write
 jobs:
   review:
     runs-on: ubuntu-latest
+    env:
+      AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'openai' }}
+      AGENT_BASE_URL: ${{ vars.AGENT_BASE_URL }}
+      AGENT_MODEL_STRONG: ${{ vars.AGENT_MODEL_STRONG }}
+      AGENT_CMD: ${{ vars.AGENT_CMD }}
+      AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
+      AGENT_REASONING_EFFORT: ${{ vars.AGENT_REASONING_EFFORT }}
+      AGENT_MAX_TOKENS: ${{ vars.AGENT_MAX_TOKENS }}
+      AGENT_BASE_REF: origin/${{ github.base_ref }}
     steps:
+      - name: Is a model configured?
+        id: cfg
+        run: |
+          missing=""
+          if [ "$AGENT_PROVIDER" = "cmd" ]; then
+            [ -n "$AGENT_CMD" ] || missing="AGENT_CMD"
+          else
+            [ -n "$AGENT_BASE_URL" ] && [ -n "$AGENT_MODEL_STRONG" ] || missing="AGENT_BASE_URL and AGENT_MODEL_STRONG"
+          fi
+          if [ -n "$missing" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice title=agent-review skipped::No model configured (missing $missing). Set repository variables/secret, see docs/GUIDE.md (CI)."
+          fi
       - uses: actions/checkout@v4
+        if: steps.cfg.outputs.skip != 'true'
         with: { fetch-depth: 0 }
       - uses: actions/setup-python@v5
+        if: steps.cfg.outputs.skip != 'true'
         with: { python-version: "3.12" }
-      - name: Find story id
+      - name: Work item id
+        if: steps.cfg.outputs.skip != 'true'
         id: sid
-        run: |
-          id=$(echo "${{ github.head_ref }} ${{ github.event.pull_request.title }}" | grep -oE 'US-[0-9]+' | head -1)
-          echo "id=${id:-US-000}" >> "$GITHUB_OUTPUT"
-      - name: Run reviewer
         env:
-          AGENT_PROVIDER: openai
-          AGENT_BASE_URL: ${{ vars.AGENT_BASE_URL }}
-          AGENT_MODEL_STRONG: ${{ vars.AGENT_MODEL_STRONG }}
-          AGENT_API_KEY: ${{ secrets.AGENT_API_KEY }}
-          AGENT_BASE_REF: origin/${{ github.base_ref }}
-        run: python tools/agentrun.py run review --id "${{ steps.sid.outputs.id }}" --apply
+          HEAD_REF: ${{ github.head_ref }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          id=$(printf '%s %s' "$HEAD_REF" "$PR_TITLE" | grep -oE 'US-[0-9]+' | head -1 || true)
+          echo "id=${id:-PR-$PR_NUMBER}" >> "$GITHUB_OUTPUT"
+      - name: Run reviewer
+        if: steps.cfg.outputs.skip != 'true'
+        env:
+          ITEM: ${{ steps.sid.outputs.id }}
+        run: python tools/agentrun.py run review --id "$ITEM" --apply
       - name: Post comment
+        if: steps.cfg.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file ".agents/out/review-${{ steps.sid.outputs.id }}.md"
+          ITEM: ${{ steps.sid.outputs.id }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR_NUMBER" --body-file ".agents/out/review-$ITEM.md"
