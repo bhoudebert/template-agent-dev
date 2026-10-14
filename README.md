@@ -16,8 +16,12 @@ request -> story -> spec -> design -> implement -> test -> QA -> review -> relea
 ## Install it in your repository
 
 ```sh
-curl -fsSL -o ~/.local/bin/agentkit \
-  https://github.com/bhoudebert/template-agent-dev/releases/latest/download/agentkit && chmod +x ~/.local/bin/agentkit
+mkdir -p ~/.local/bin
+os=$(uname -s); arch=$(uname -m)
+case "$os" in Darwin) os=apple-darwin;; *) os=unknown-linux-gnu;; esac
+case "$arch" in arm64|aarch64) arch=aarch64;; *) arch=x86_64;; esac
+curl -fsSL "https://github.com/bhoudebert/template-agent-dev/releases/latest/download/agentkit-$arch-$os.tar.gz" \
+  | tar -xz -C ~/.local/bin
 cd my-repo
 agentkit install --plan      # see what it would do
 agentkit install             # a branch and one commit; nothing is pushed; review it as a PR

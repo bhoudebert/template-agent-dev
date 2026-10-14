@@ -35,13 +35,15 @@ Your repository must be a git repository with a clean working tree (the installe
 
 ## 1. Get the installer
 
-**From a release (no clone).** One executable file holds the engine and the exact kit for that version.
+**From a release (no clone).** One executable file holds the engine and the exact kit for that version. It is published as `agentkit-<arch>-<os>.tar.gz` (the same bytes for every platform, named so mise and `curl | tar` find it) with an `agentkit.sha256`.
 
 ```sh
 mkdir -p ~/.local/bin
-curl -fsSL -o ~/.local/bin/agentkit \
-  https://github.com/bhoudebert/template-agent-dev/releases/latest/download/agentkit
-chmod +x ~/.local/bin/agentkit
+os=$(uname -s); arch=$(uname -m)
+case "$os" in Darwin) os=apple-darwin;; *) os=unknown-linux-gnu;; esac
+case "$arch" in arm64|aarch64) arch=aarch64;; *) arch=x86_64;; esac
+curl -fsSL "https://github.com/bhoudebert/template-agent-dev/releases/latest/download/agentkit-$arch-$os.tar.gz" \
+  | tar -xz -C ~/.local/bin
 agentkit --help
 ```
 
@@ -56,7 +58,7 @@ Two things can stop that, both from mise, not from the kit:
 | mise says | Why | Do |
 |---|---|---|
 | `no versions found ... matching date filter` | mise hides releases younger than its release-age cooldown (a supply-chain guard), so a **brand-new** release is invisible for a while | wait, or bypass once: `mise use -g --minimum-release-age 0 "github:bhoudebert/template-agent-dev@latest"`, or exempt it for good: `mise settings add minimum_release_age_excludes github:bhoudebert/template-agent-dev` |
-| `No matching asset found for platform ...` | the release has no `agentkit` asset (a release made before the asset was attached) | use the `curl` line above, or re-run the `release-pyz` workflow for that tag |
+| `No matching asset found for platform ...` | the release has no platform archive attached (`agentkit-<arch>-<os>.tar.gz`) | use the `curl` line above, or re-run the `release-pyz` workflow for that tag |
 
 **From a clone** (before the first release, or to contribute):
 

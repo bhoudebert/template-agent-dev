@@ -37,5 +37,17 @@ jobs:
           python dist/agentkit --help
           tmp=$(mktemp -d) && cd "$tmp" && git init -q && git config user.name ci && git config user.email ci@example.com \
             && git commit -q --allow-empty -m init && python "$GITHUB_WORKSPACE/dist/agentkit" install --plan | head -5
+      - name: Package per platform
+        # The file is pure Python, so the same bytes serve every platform. It is published under the
+        # platform names mise (and curl | tar) look for; an extension-less or platform-less asset is
+        # not detected by mise. No raw `agentkit` asset and no per-archive .sha256: both stop mise
+        # resolving the release.
+        run: |
+          cd dist
+          chmod +x agentkit
+          for t in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin; do
+            tar -czf "agentkit-$t.tar.gz" agentkit
+          done
+          sha256sum agentkit-*.tar.gz > agentkit.sha256
       - name: Attach to the release
-        run: gh release upload "$TAG" dist/agentkit dist/agentkit.sha256 --clobber
+        run: gh release upload "$TAG" dist/agentkit-*.tar.gz dist/agentkit.sha256 --clobber
