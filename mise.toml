@@ -56,6 +56,18 @@ arg "<id>" help="US-002 or INC-001"
 '''
 run = 'python3 tools/items.py branch "${usage_id}"'
 
+[tasks.hooks]
+description = "Enable the repo git hooks (blocks agent names in commit messages)"
+run = "git config core.hooksPath .githooks && echo 'hooks enabled: .githooks'"
+
+[tasks.ship]
+description = "Checks + push branch + open PR (PR mode):  mise run ship [--draft] [--base parent-branch]"
+usage = '''
+flag "--draft" help="open as draft PR"
+flag "--base <branch>" default="main" help="PR base; use the parent branch for stacked PRs"
+'''
+run = 'sh tools/ship.sh "${usage_base}" "${usage_draft}"'
+
 [tasks.status]
 description = "List stories, their status and the next stage"
 run = "python3 tools/items.py list"

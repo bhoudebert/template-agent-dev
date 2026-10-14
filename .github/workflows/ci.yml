@@ -4,6 +4,10 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
       - name: PR title is a Conventional Commit
         if: github.event_name == 'pull_request'
         env:
@@ -11,9 +15,15 @@ jobs:
         run: |
           printf '%s\n' "$TITLE" | grep -Eq '^(feat|fix|docs|test|refactor|perf|build|ci|chore|revert)(\([A-Za-z0-9._-]+\))?!?: .+' \
             || { echo "PR title must be a Conventional Commit, e.g. feat(US-002): export invoices"; exit 1; }
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
+      - name: No agent attribution in PR text or commits
+        if: github.event_name == 'pull_request'
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          printf '%s\n%s\n' "$TITLE" "$BODY" | python tools/check_attribution.py --stdin
+          python tools/check_attribution.py --range "origin/$BASE..HEAD"
       - run: python tools/validate.py
       - run: python tools/trace_check.py
       - run: python -m unittest discover -s tests

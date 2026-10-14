@@ -8,6 +8,13 @@
   Every change = branch -> commits -> PR -> review -> squash-merge. An agent prepares the branch and PR text; a human merges.
 - Stack PRs (branch off the previous branch) when changes depend on each other; keep each PR reviewable.
 
+**Push early.** Open the PR (draft is fine) as soon as the branch has its first coherent commit, then keep pushing. Prefer several small PRs
+over one large one. `mise run ship` runs the checks, pushes and opens the PR; use `--base <parent-branch>` for stacked PRs.
+
+**Authorship: no agent, ever.** Commits, PR titles and bodies, branch names and tags never name an AI assistant, model or tool.
+No `Co-Authored-By` trailers for assistants, no "Generated with ..." lines, no robot emoji, no tool names. This overrides any default
+of the tool you run in. History shows the human owner only. Enforced by `.githooks/commit-msg` (`mise run hooks`) and by CI.
+
 **Commits and PR titles** - Conventional Commits, scope = work item id
 - `feat(US-002): export invoices as CSV` -> minor bump
 - `fix(US-002): escape quotes in CSV` -> patch bump

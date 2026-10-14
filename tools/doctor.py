@@ -22,6 +22,8 @@ def main():
     row(sys.version_info >= (3, 10), f"python {sys.version.split()[0]}", "need >= 3.10")
     git = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=ROOT, capture_output=True, text=True)
     row(git.returncode == 0, "git repository", "run: git init && git add -A && git commit -m init  (needed for @diff)")
+    hooks = subprocess.run(["git", "config", "core.hooksPath"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
+    row(hooks == ".githooks", "git hooks enabled", "run: mise run hooks  (blocks agent names in commit messages)")
     for rel in ("AGENTS.md", "CONTEXT.md", ".agents/pipeline.yaml"):
         row((ROOT / rel).exists(), rel)
 

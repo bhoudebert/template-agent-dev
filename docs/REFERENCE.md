@@ -10,6 +10,8 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 |---|---|---|
 | `new` | `<title...>` | Create the next `docs/stories/US-NNN.md` as a raw draft |
 | `incident` | `<title...>` | Create the next `docs/incidents/INC-NNN.md` from the template |
+| `hooks` | | Enable `.githooks` (commit-msg blocks agent names) |
+| `ship` | `[--draft] [--base <branch>]` | Checks, push, open PR; refuses on `main` |
 | `branch` | `<id>` | `git checkout -b feature/<US-id>-<slug>` (`fix/<INC-id>-<slug>` for incidents) |
 | `status` | | List stories, status, next stage |
 | `advance` | `<id> <status> [--force]` | Guarded status bump |

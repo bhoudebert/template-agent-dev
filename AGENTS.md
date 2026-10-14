@@ -36,7 +36,9 @@ Artifacts are plain files in git; they are the only memory between stages.
 6. Match existing style. Smallest change that satisfies the spec.
    Git: trunk `main` + one `feature/<US-id>-<slug>` branch per story; Conventional Commits with the story id as scope
    (`feat(US-002): ...`); PR mode always (never commit to `main`); SemVer via release-please - never edit CHANGELOG/version/tags. See `.agents/policies/git.md`.
-7. Before finishing run `python tools/validate.py && python tools/trace_check.py` and the test suite.
+7. History never names an agent: no `Co-Authored-By` for an assistant, no "Generated with" lines, no tool or model names in commits,
+   PR titles/bodies, branches or tags (enforced by hook and CI). Push early: `mise run ship` as soon as a branch has a coherent commit.
+8. Before finishing run `python tools/validate.py && python tools/trace_check.py` and the test suite.
 
 ## Commands
 

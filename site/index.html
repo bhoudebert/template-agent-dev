@@ -171,7 +171,7 @@
     <article class="stage" id="s-review" data-label="Review &amp; merge">
       <header><h3>7 &middot; Review &amp; merge</h3><span class="meta">role reviewer &middot; gate human merge</span></header>
       <div class="beats">
-        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>Open the PR from the story branch</li><li>Title: <code>feat(US-002): export invoices as CSV</code></li></ul></div>
+        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>Push early: <code>mise run ship</code> opens the PR</li><li>Title: <code>feat(US-002): export invoices as CSV</code></li></ul></div>
         <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Reads the diff and posts one ranked comment: correctness, security, spec conformance, tests.</p></div>
         <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>You are the reviewer; the agent is a second pair of eyes</li><li>Fix blockers and majors</li></ul></div>
         <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li>Squash-merge into <code>main</code></li></ul></div>
@@ -253,6 +253,7 @@
         <li>Let the agent "make tests pass" by editing tests</li>
         <li>Loosen a schema or validator to get green</li>
         <li>Commit or push directly to <code>main</code></li>
+        <li>Name an AI assistant in a commit, PR or branch</li>
         <li>Edit <code>CHANGELOG.md</code>, versions or tags</li>
         <li>Paste secrets into stories, incidents or prompts</li>
         <li>Merge on the strength of the agent's review alone</li>

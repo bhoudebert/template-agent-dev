@@ -123,6 +123,8 @@ Rules of thumb:
 | Long-lived branch | `main` only, always releasable |
 | Work branch | `feature/<US-id>-<slug>` per story; `fix/<INC-id>-<slug>` for incidents |
 | Commit / PR title | Conventional Commits, scope = work item id: `feat(US-002): ...` |
+| Authorship | History shows the human owner only: no assistant or tool names, no `Co-Authored-By` for an AI, no "Generated with" lines. Hook + CI enforce it |
+| Pushing | Push early, small PRs: `mise run ship` (checks, push, open PR; `--draft`, `--base <parent>` for stacks) |
 | Breaking change | `feat(US-002)!:` or footer `BREAKING CHANGE:` |
 | Version | SemVer by release-please; tags `vX.Y.Z`; nobody edits `CHANGELOG.md` |
 

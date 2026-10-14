@@ -28,6 +28,8 @@ mise run status                         # all stories, status, next stage
 | `agent:test <id>` | test-engineer stage (`test` is the unit-test task) |
 | `agent <stage> <id>` | same, any stage |
 | `branch <id>` | create `feature/<US-id>-<slug>` |
+| `hooks` | enable the commit-msg hook (no agent names in history) |
+| `ship [--draft] [--base b]` | checks + push + open PR; refuses on `main` |
 | `advance <id> <status>` | set story status; refuses skipped steps or broken traceability (`--force` overrides) |
 | `check`, `validate`, `trace`, `test` | deterministic checks |
 | `doctor`, `env`, `stages`, `status` | inspect setup / pipeline / items |
