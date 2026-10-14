@@ -109,14 +109,33 @@ class Install(unittest.TestCase):
         self.assertFalse((d / ".agentkit").exists())
         self.assertEqual(git(d, "branch", "--show-current").stdout.strip(), "main")
 
-    def test_collision_keeps_the_projects_file(self):
+    def test_collision_in_tools_blocks_the_install_instead_of_breaking_the_kit(self):
         d = host_repo()
         (d / "tools").mkdir()
         (d / "tools/validate.py").write_text("# my own validator\n")
         git(d, "add", "-A"); git(d, "commit", "-q", "-m", "own tool")
-        cli("install", "--target", d)
+        with self.assertRaises(SystemExit):
+            cli("install", "--target", d)
+        self.assertFalse((d / ".agentkit").exists())
+        self.assertEqual(git(d, "branch", "--show-current").stdout.strip(), "main")     # nothing was started
+        self.assertEqual(cli("install", "--target", d, "--plan"), 1)                    # plan says so too
+
+    def test_allow_collisions_keeps_yours_and_does_not_lock_it(self):
+        d = host_repo()
+        (d / "tools").mkdir()
+        (d / "tools/validate.py").write_text("# my own validator\n")
+        git(d, "add", "-A"); git(d, "commit", "-q", "-m", "own tool")
+        cli("install", "--target", d, "--allow-collisions")
         self.assertEqual((d / "tools/validate.py").read_text(), "# my own validator\n")
         self.assertNotIn("tools/validate.py", json.loads((d / ".agentkit/lock.json").read_text())["files"])
+
+    def test_a_collision_outside_tools_is_kept_with_a_note(self):
+        d = host_repo()
+        (d / ".agents/roles").mkdir(parents=True)
+        (d / ".agents/roles/analyst.md").write_text("# our analyst\n")
+        git(d, "add", "-A"); git(d, "commit", "-q", "-m", "own role")
+        cli("install", "--target", d)
+        self.assertEqual((d / ".agents/roles/analyst.md").read_text(), "# our analyst\n")
 
     def test_refuses_on_a_dirty_tree_and_a_second_install(self):
         d = host_repo()
@@ -127,6 +146,79 @@ class Install(unittest.TestCase):
         cli("install", "--target", d)
         with self.assertRaises(SystemExit):
             cli("install", "--target", d)
+
+
+class PointersAndGitignore(unittest.TestCase):
+    def test_host_gitignore_block_has_no_kit_only_entries(self):
+        d = host_repo()
+        cli("install", "--target", d)
+        text = (d / ".gitignore").read_text()
+        self.assertIn("node_modules/", text)
+        self.assertIn(".agents/runs/", text)
+        for kit_only in ("site/docs/", "dist/"):
+            self.assertNotIn(kit_only, text)
+
+    def test_pointers_feature_writes_assistant_entry_files(self):
+        d = host_repo()
+        (d / "CLAUDE.md").write_text("# My Claude notes\nKeep answers short.\n")
+        git(d, "add", "-A"); git(d, "commit", "-q", "-m", "claude")
+        cli("install", "--target", d, "--with", "pointers")
+        claude = (d / "CLAUDE.md").read_text()
+        self.assertIn("Keep answers short.", claude)         # theirs untouched
+        self.assertIn("@AGENTS.md", claude)                  # the import was added in a block
+        self.assertIn("AGENTS.md", (d / ".github/copilot-instructions.md").read_text())
+        self.assertTrue((d / ".cursor/rules/agentkit.mdc").exists())
+
+    def test_pointers_are_opt_in(self):
+        d = host_repo()
+        cli("install", "--target", d)
+        self.assertFalse((d / "CLAUDE.md").exists())
+
+
+class Uninstall(unittest.TestCase):
+    def test_removes_the_kit_and_keeps_what_is_yours(self):
+        d = host_repo()
+        cli("install", "--target", d, "--with", "pointers")
+        git(d, "switch", "-q", "main"); git(d, "merge", "-q", "--ff-only", "chore/agentkit-install")
+        (d / "CONTEXT.md").write_text("# my context\n")                      # a seed the project owns
+        role = d / ".agents/roles/analyst.md"
+        role.write_text(role.read_text() + "\n- our rule\n")               # an edited tailorable file
+        git(d, "add", "-A"); git(d, "commit", "-q", "-m", "edits")
+        self.assertEqual(cli("uninstall", "--target", d), 0)
+        self.assertFalse((d / "tools/agentrun.py").exists())
+        self.assertFalse((d / ".agentkit").exists())
+        self.assertFalse((d / ".config/mise/conf.d/agentkit.toml").exists())
+        self.assertEqual((d / "AGENTS.md").read_text().strip(), HOST_AGENTS.strip())   # block gone, theirs intact
+        self.assertEqual((d / "mise.toml").read_text(), HOST_MISE)
+        self.assertEqual((d / "CONTEXT.md").read_text(), "# my context\n")
+        self.assertIn("our rule", role.read_text())                           # edited file kept
+        self.assertFalse((d / "CLAUDE.md").exists())                          # only held our block: removed
+        self.assertEqual(git(d, "branch", "--show-current").stdout.strip(), "chore/agentkit-uninstall")
+
+    def test_plan_changes_nothing(self):
+        d = host_repo()
+        cli("install", "--target", d)
+        git(d, "switch", "-q", "main"); git(d, "merge", "-q", "--ff-only", "chore/agentkit-install")
+        self.assertEqual(cli("uninstall", "--target", d, "--plan"), 0)
+        self.assertTrue((d / "tools/agentrun.py").exists())
+        self.assertEqual(git(d, "branch", "--show-current").stdout.strip(), "main")
+
+
+class KitCompleteness(unittest.TestCase):
+    def test_every_tool_is_shipped_or_deliberately_not(self):
+        k = agentkit.Kit(ROOT)
+        shipped = {e["src"] for e in k.entries(sorted(k.manifest["features"]))}
+        deliberately_not = {"tools/build_site.py"}      # the kit's own website generator
+        for rel in k.files():
+            if rel.startswith(("tools/", ".githooks/", ".agents/")) and not rel.startswith("tools/tests/"):
+                self.assertTrue(rel in shipped or rel in deliberately_not, f"{rel} is not shipped by kit.json")
+
+    def test_no_dead_manifest_entries(self):
+        import fnmatch
+        k = agentkit.Kit(ROOT)
+        files = k.files()
+        for e in k.manifest["entries"]:
+            self.assertTrue(any(fnmatch.fnmatch(f, e["match"]) for f in files), f"dead entry {e['match']}")
 
 
 class Reconcile(unittest.TestCase):

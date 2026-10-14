@@ -2,7 +2,7 @@
 
 How to run a feature through the agentic SDLC, step by step.
 
-## 0. Shortcut: mise tasks (no long commands)
+## Shortcut: mise tasks (no long commands)
 
 Everything below has a short [mise](https://mise.jdx.dev) task. `mise tasks` lists them all.
 
@@ -38,7 +38,7 @@ mise run status                         # all stories, status, next stage
 
 The plain `python3 tools/...` commands in the rest of this guide still work without mise.
 
-## 1. Mental model
+## Mental model
 
 - A **work item** is a story id: `US-001`. Incidents use `INC-001`.
 - Each **stage** (`story`, `spec`, `design`, ...) is one role-agent. It reads input files, calls an LLM, and writes output files.
@@ -63,7 +63,7 @@ draft -> enriched -> approved -> specified -> designed -> implemented -> done
 | release | `run release --id US-002` | story, QA, diff | `docs/releases/US-002.md` | release manager |
 | diagnose | `run diagnose --id INC-001` | incident, runbooks | incident + runbooks | on-call |
 
-## 2. One-time setup
+## One-time setup
 
 Requires Python 3.10+. No packages to install.
 
@@ -105,7 +105,7 @@ Stages declare `model: cheap|strong` in `pipeline.yaml`; tiers map to `AGENT_MOD
 
 Weak local models will struggle with strict output formats. Start with `--dry-run` and try a strong model for `spec` and `design`.
 
-## 3. Walkthrough: a new feature
+## Walkthrough: a new feature
 
 Worked example already in the repo: `US-001` (password reset). Study its files for what "good" looks like.
 
@@ -178,71 +178,7 @@ Output is a ranked hypothesis list and recommended actions. A human executes any
 
 ## Adopting the kit in an existing repository
 
-The kit installs into another repo on a branch, as one commit, and updates the same way. You always review
-the change as a diff in a PR; nothing is pushed for you and `main` is never touched.
-
-```sh
-git clone <kit-url> ~/src/agentkit                       # once
-cd ~/src/agentkit
-mise run kit:install ../my-repo --plan                   # see what it would do
-mise run kit:install ../my-repo --with ci,docs           # branch chore/agentkit-install, one commit
-cd ../my-repo && mise run ship                           # review the diff as a PR
-```
-
-Later, to update:
-
-```sh
-git -C ~/src/agentkit pull                               # a newer kit
-cd ../my-repo
-mise run kit:status                                      # clean / you edited / kit changed / both
-mise run kit:update --plan                               # what would change
-mise run kit:update                                      # branch chore/agentkit-update-<version>
-mise run kit:update tools                                # only tools, hooks, schemas, templates
-mise run kit:update ci                                   # CI is refreshed only when you ask
-```
-
-### From a release (no clone)
-
-Every release carries one executable file, `agentkit.pyz`: the engine plus the exact kit payload of that
-version, with a `.sha256` next to it. Nothing is cloned and nothing is fetched at install or update time.
-
-```sh
-# put it on your PATH (check the .sha256 first if you like)
-curl -fsSL -o ~/.local/bin/agentkit \
-  https://github.com/<owner>/<repo>/releases/latest/download/agentkit.pyz && chmod +x ~/.local/bin/agentkit
-# or let mise manage it (confirm the asset is detected on your first release)
-mise use -g "github:<owner>/<repo>@latest"
-
-cd my-repo
-agentkit install --with ci          # branch + one commit
-agentkit status
-# later
-mise upgrade agentkit               # or re-download
-agentkit update --plan && agentkit update
-agentkit reconcile                  # a model resolves any conflicted file; --brief for your assistant instead
-```
-
-An adopting repo also carries its own `tools/agentkit.py` (so `mise run kit:status` works offline), but it has
-no kit beside it: to *update*, run the newer `agentkit` (or pass `--from <clone or git URL>`).
-
-When an update leaves conflicts, `agentkit reconcile` gives a model (any configured provider) the diff3 markers,
-the `integrator` role and your `CONTEXT.md`, then validates the answer (no markers left, JSON/TOML parse) and lists
-any of your lines missing from the result. A bad reply leaves the file untouched; `--brief` writes
-`.agentkit/reconcile/*.md` for an assistant instead. You always review the result as a diff.
-
-What happens to each kind of file:
-
-| Class | Examples | On update |
-|---|---|---|
-| managed | `tools/*`, `.githooks/*`, `.agents/schemas`, `.agents/templates`, kit workflows | overwritten (a local edit shows as a deletion in the PR) |
-| tailorable | `.agents/roles`, `skills`, `policies`, `pipeline.yaml` | 3-way merged; a real conflict is left as `<<<<<<< local` markers and listed in `.agentkit/CHANGES.md` |
-| block | `AGENTS.md`, `.gitignore` | only the region between `agentkit:begin` and `agentkit:end` is rewritten; your text is untouched |
-| side | kit tasks in `.config/mise/conf.d/agentkit.toml` | overwritten; your own `mise.toml` is never edited, and your task names win a clash |
-| seed | `CONTEXT.md`, `.env.example`, the empty `docs/*` folders | copied once, then yours; never updated |
-
-Your own files are never overwritten on install: a collision keeps yours and says so. To stop the kit
-touching a file, list it (globs) in `.agentkit/ignore`. `mise run kit:check` (and CI) fails while conflict
-markers remain.
+See the [install guide](INSTALL.md): install on a branch, update, resolve conflicts, uninstall.
 
 ## Driving everything from a prompt (Claude Code, Codex, Copilot)
 
@@ -285,7 +221,7 @@ the number and there is no second counter.
 - **Versions**: SemVer via [release-please](https://github.com/googleapis/release-please). It maintains a release PR on `main`; merging it tags `vX.Y.Z` and updates `CHANGELOG.md`. Never edit changelog, version or tags by hand. Set `release-type` in `release-please-config.json` for your stack.
 - Policy text agents read: `.agents/policies/git.md`.
 
-## 4. Automating in CI (GitHub)
+## Automating in CI (GitHub)
 
 ```sh
 adapters/install.sh github tools
@@ -307,7 +243,7 @@ adapters/install.sh github tools
 
 `tools` also writes `CLAUDE.md`, `.github/copilot-instructions.md`, `.cursor/rules/agents.mdc`; each just points the tool at `AGENTS.md`.
 
-## 5. Adapting to your project
+## Adapting to your project
 
 | I want to... | Edit |
 |---|---|
@@ -320,13 +256,13 @@ adapters/install.sh github tools
 
 `pipeline.yaml` fields: `in` = files/globs fed to the model (`{id}` substituted, `@diff` = git diff); `out` = the only paths the stage may write; `check` = `validate` and/or `trace`.
 
-## 6. Troubleshooting
+## Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
 | `validate`: `file name must be ...` | the file name must start with its `id` (or `story`): rename the file, e.g. `ADR-0003-use-queue.md`, `US-012.md`. Existing projects adopting the template: run `mise run validate` once and rename what it lists |
 | review comment not posted: `cannot list comments` | `gh` is not authenticated or lacks `pull-requests: write`. Nothing is posted on purpose (a failed lookup must not create duplicates) |
-| `agent-review` check shows "skipped" | no model configured for CI; set the repository variables (section 4) |
+| `agent-review` check shows "skipped" | no model configured for CI; set the repository variables (see Automating in CI) |
 | exit 3 `no model set` | export `AGENT_MODEL` (or `_STRONG/_CHEAP`) |
 | exit 3 `model returned no text` | a thinking model spent its whole budget reasoning (minutes, empty answer). Set `AGENT_REASONING_EFFORT=none` (or `low`) and `AGENT_MAX_TOKENS=16000`, or use a non-thinking model |
 | exit 3 `openai provider failed` | wrong `AGENT_BASE_URL`, server down, or timeout (`AGENT_TIMEOUT` seconds) |
@@ -339,7 +275,7 @@ adapters/install.sh github tools
 
 Every `--apply` run is logged to `.agents/runs/*.json` (stage, provider, prompt hash, files, check errors; git-ignored).
 
-## 7. Limits to know
+## Limits to know
 
 - Only structure is validated, not whether the content is right. The human gate is the quality control.
 - The runner writes files; it does not run your build or tests, commit, or open PRs (except the GitHub workflows).

@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PAGES = [  # (slug, source file, nav title)
+    ("install", "INSTALL.md", "Install"),
     ("tutorial", "TUTORIAL.md", "Tutorial"),
     ("workflow", "WORKFLOW.md", "Workflow"),
     ("guide", "GUIDE.md", "Guide"),
