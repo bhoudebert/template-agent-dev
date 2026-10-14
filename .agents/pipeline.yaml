@@ -3,6 +3,10 @@
 # `{id}` = work item id (US-001, INC-001, ...). `@diff` = git diff of the PR.
 # model tier: cheap | strong  (mapped to AGENT_MODEL_CHEAP / AGENT_MODEL_STRONG)
 version: 1
+# What counts as "behaviour is anchored" for tools/evidence.py (fnmatch globs, `*` crosses `/`).
+evidence:
+  tests: ["tests/*", "*/tests/*", "*__tests__*", "*.test.*", "*.spec.*", "*_test.*", "test_*", "*/test_*"]
+  specs: ["openspec/specs/*", "openspec/changes/*"]
 stages:
   - name: story
     role: analyst

@@ -144,7 +144,7 @@ class Skip(unittest.TestCase):
         self.assertTrue(any("skip_reason" in e for e in validate.check_file(p, d)))
         d = sandbox()
         p = self.story(d, skip="[qa]", skip_reason="x")
-        self.assertTrue(any("only contain spec and design" in e for e in validate.check_file(p, d)))
+        self.assertTrue(any("may only contain spec, design and tests" in e for e in validate.check_file(p, d)))
 
     def test_advance_may_jump_skipped_statuses_only(self):
         d = sandbox()
@@ -202,6 +202,65 @@ class SkipHelper(unittest.TestCase):
         rc, msgs = promptmode.apply("story", "US-001", code, response=str(resp), root=d)
         self.assertEqual(rc, 0, msgs)
         self.assertIn("skip: [design]", p.read_text())
+
+
+class Evidence(unittest.TestCase):
+    """The floor: a story at `implemented` must change a spec or a test, or waive tests."""
+
+    def setup_repo(self, status="implemented", skip=""):
+        import evidence
+        self.ev = evidence
+        d = Path(tempfile.mkdtemp())
+        (d / "docs/stories").mkdir(parents=True)
+        (d / "docs/stories/US-001.md").write_text(
+            f"---\nid: US-001\ntype: story\ntitle: t\nstatus: {status}\nowner: po\n{skip}---\nbody\n")
+        (d / "src").mkdir()
+        (d / "src/app.js").write_text("a")
+        git(d, "init", "-q", "-b", "main"); git(d, "add", "-A"); git(d, "commit", "-q", "-m", "init")
+        git(d, "switch", "-q", "-c", "feature/US-001-x")
+        return d
+
+    def run_ev(self, d, extra_changes=()):
+        for rel, content in extra_changes:
+            (d / rel).parent.mkdir(parents=True, exist_ok=True)
+            (d / rel).write_text(content)
+        git(d, "add", "-A"); git(d, "commit", "-q", "-m", "change", "--allow-empty")
+        files = self.ev.changed_files(d, "main")
+        return self.ev.evaluate(d, "US-001", files)
+
+    def test_code_only_fails_even_when_spec_and_design_are_skipped(self):
+        d = self.setup_repo(skip="skip: [spec, design]\nskip_reason: tiny\n")
+        ok, lines = self.run_ev(d, [("src/app.js", "b")])
+        self.assertFalse(ok)
+        self.assertIn("no spec and no test file changed", "\n".join(lines))
+
+    def test_a_test_change_is_enough(self):
+        d = self.setup_repo(skip="skip: [spec, design]\nskip_reason: tiny\n")
+        ok, _ = self.run_ev(d, [("src/app.js", "b"), ("tests/app.test.js", "t")])
+        self.assertTrue(ok)
+
+    def test_a_spec_change_is_enough(self):
+        d = self.setup_repo()
+        ok, _ = self.run_ev(d, [("src/app.js", "b"), ("openspec/specs/api/spec.md", "## ADDED Requirements\n")])
+        self.assertTrue(ok)
+
+    def test_tests_waiver_for_docs_or_config_only(self):
+        d = self.setup_repo(skip="skip: [tests]\nskip_reason: docs only\n")
+        ok, lines = self.run_ev(d, [("docs/guide.md", "x")])
+        self.assertTrue(ok)
+        self.assertIn("waived", "\n".join(lines))
+
+    def test_not_enforced_before_implemented(self):
+        d = self.setup_repo(status="approved")
+        ok, lines = self.run_ev(d, [("docs/stories/US-001.md", "---\nid: US-001\ntype: story\ntitle: t\nstatus: approved\nowner: po\n---\nmore\n")])
+        self.assertTrue(ok)
+        self.assertIn("informational", "\n".join(lines))
+
+    def test_tests_waiver_needs_a_reason_via_validate(self):
+        d = sandbox()
+        p = d / "docs/stories/US-001.md"
+        p.write_text(p.read_text().replace("status: designed\n", "status: designed\nskip: [tests]\n", 1))
+        self.assertTrue(any("skip_reason" in e for e in validate.check_file(p, d)))
 
 
 class Preflight(unittest.TestCase):

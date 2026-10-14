@@ -24,6 +24,14 @@ jobs:
         run: |
           printf '%s\n%s\n' "$TITLE" "$BODY" | python tools/check_attribution.py --stdin
           python tools/check_attribution.py --range "origin/$BASE..HEAD"
+      - name: Evidence floor (a spec or test change for the story)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          story=$(printf '%s' "$HEAD_REF" | grep -oE 'US-[0-9]+' | head -1 || true)
+          python tools/evidence.py --base "origin/$BASE" ${story:+--story "$story"}
       - run: python tools/validate.py
       - run: python tools/trace_check.py
       - name: Index is up to date

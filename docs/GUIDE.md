@@ -197,7 +197,7 @@ assistant:  mise run orient            # rules + state
 - The assistant must wait for your explicit yes before `advance`, `ship` or a merge.
 - The `mise run <stage>` path (any model API, Ollama, or a CLI) is unchanged and is what CI uses.
 
-Not every story needs a spec, a design or an ADR: set `skip: [spec, design]` and a `skip_reason` in the story.
+Not every story needs a spec, a design or an ADR: `mise run skip US-003 spec,design --reason "copy fix"`. A skipped spec still needs evidence: a changed test (a non-regression test counts) or a spec; `skip: [tests]` waives it for docs/config only.
 
 ## Git, versions, releases
 

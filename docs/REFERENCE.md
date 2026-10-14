@@ -25,6 +25,7 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `prepare` | `<stage> <id>` | Prompt mode: write `.agents/out/bundle-<stage>-<id>.md` and print the receipt |
 | `apply` | `<stage> <id> --receipt <code> (--response <file> \| --worktree)` | Prompt mode: verify receipt, confine, validate, trace, log |
 | `index` / `index:check` | | Regenerate / verify `docs/INDEX.md` |
+| `evidence` | | Evidence floor: from `implemented` on, the branch must change a spec or a test, or waive `tests` |
 | `check` | | `validate` + `trace` + `test` |
 | `test` | | The **project's** tests: auto-detects `npm test`, pytest, `go test`, `cargo test`, `mvn test` (`tools/projecttest.sh`) |
 | `test:tools` | | The template's own tool tests (`tools/tests`) |
@@ -150,10 +151,21 @@ Enums: story `status` = draft, enriched, approved, specified, designed, implemen
 
 | Key | Meaning |
 |---|---|
-| `skip: [spec, design]` | This story needs no OpenSpec change and/or no design. `trace_check` does not demand them; `advance` may step over the matching statuses. Only `spec` and `design` can be skipped. |
+| `skip: [spec, design]` | This story needs no OpenSpec change and/or no design. `trace_check` does not demand them; `advance` may step over the matching statuses. |
+| `skip: [tests]` | Waives the evidence floor (docs, config or infra only). Does not change the status path. |
 | `skip_reason` | Required whenever `skip` is set. Say why (e.g. "copy change", "config only"). |
 
 An ADR is never required by itself: a design note without an ADR satisfies `designed`, and `skip: [design]` needs neither.
+
+## Evidence floor (`tools/evidence.py`)
+
+| | |
+|---|---|
+| Rule | A story at `implemented` or `done` must have, in its branch's diff (plus uncommitted changes), at least one changed spec file or one changed test file, or `skip: [tests]` with a reason |
+| Story id | `--story`, else the `US-NNN` in the branch name; no id means nothing to enforce |
+| Base | `--base`, else `AGENT_BASE_REF`, else `origin/main`, `main` |
+| Globs | `evidence.tests` and `evidence.specs` in `.agents/pipeline.yaml` (fnmatch; `*` crosses `/`) |
+| Where it runs | `mise run evidence`, `mise run ship`, CI on pull requests |
 
 ## What `validate` and `trace_check` enforce
 

@@ -102,13 +102,13 @@ def set_status(sid, new, force=False, root=ROOT):
 
 
 def set_skip(sid, stages, reason, root=ROOT):
-    """Declare that a story needs no spec and/or no design (or clear it with an empty list)."""
+    """Declare that a story needs no spec / design / tests-evidence (or clear it with an empty list)."""
     path = Path(root) / "docs" / "stories" / f"{sid}.md"
     if not path.exists():
         raise SystemExit(f"no such story: {path}")
-    bad = [s for s in stages if s not in ("spec", "design")]
+    bad = [s for s in stages if s not in ("spec", "design", "tests")]
     if bad:
-        raise SystemExit(f"only `spec` and `design` can be skipped, not {bad}")
+        raise SystemExit(f"only `spec`, `design` and `tests` can be skipped, not {bad}")
     if stages and not (reason or "").strip():
         raise SystemExit("--reason is required: say why this story needs no " + " / ".join(stages))
     text = path.read_text(encoding="utf-8")

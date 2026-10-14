@@ -14,6 +14,7 @@ python3 tools/trace_check.py
 sh tools/projecttest.sh
 git rev-parse --verify -q "$base" >/dev/null || git fetch -q origin "$base"
 python3 tools/check_attribution.py --range "$base..HEAD"
+AGENT_BASE_REF="$base" python3 tools/evidence.py
 git push -u origin HEAD
 if url=$(gh pr view --json url -q .url 2>/dev/null); then
   echo "PR already open, branch pushed: $url (draft -> ready: gh pr ready)"

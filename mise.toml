@@ -129,6 +129,10 @@ flag "--reason <text>" help="why no spec/design is needed (required unless clear
 '''
 run = 'python3 tools/items.py skip "${usage_id}" "${usage_stages}" --reason "${usage_reason}"'
 
+[tasks.evidence]
+description = "Does this branch leave evidence (a spec or test change) for its story?"
+run = "python3 tools/evidence.py"
+
 [tasks.status]
 description = "List stories, their status and the next stage"
 run = "python3 tools/items.py list"
