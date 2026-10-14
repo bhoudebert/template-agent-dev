@@ -188,7 +188,7 @@ Output is a ranked hypothesis list and recommended actions. A human executes any
 ```sh
 adapters/install.sh github tools
 ```
-- Copies workflows to `.github/workflows/`: `ci.yml` (PR title check, validate, trace, tests), `release-please.yml`, `agent-review.yml` (comments on PRs), `agent-triage.yml` (label an issue `agent:enrich` -> PR with enriched story).
+- Copies workflows to `.github/workflows/`: `ci.yml` (PR title check, no assistant names, validate, trace, tool and project tests), `release-please.yml`, `agent-review.yml` (one review comment per PR, updated in place), `agent-triage.yml` (label an issue `agent:enrich` -> PR with enriched story).
 - Configure the model in **Settings > Secrets and variables > Actions**:
 
   | Kind | Name | Example |
@@ -200,9 +200,8 @@ adapters/install.sh github tools
 
 - **Not configured? The agent workflows skip** with a notice (they do not fail). The deterministic `ci` workflow is independent and always runs.
 - A GitHub-hosted runner cannot reach a model on your own machine (`localhost`). Use a hosted OpenAI-compatible API, or register a self-hosted runner on a machine that can reach your model and set `runs-on: self-hosted`.
-- Local models need a self-hosted runner that can reach them.
 - Name PR branches `feature/US-002-...` so the reviewer finds the story id.
-- These workflows are untested against a real repo. Try on a throwaway repo first; the triage workflow feeds issue text into a shell, review before enabling on public repos.
+- The agent workflows read branch names, titles and issue text through `env`, never inline in shell. Still, try them on a throwaway repo first; triage treats issue text as untrusted input.
 
 `tools` also writes `CLAUDE.md`, `.github/copilot-instructions.md`, `.cursor/rules/agents.mdc`; each just points the tool at `AGENTS.md`.
 
