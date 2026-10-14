@@ -12,6 +12,7 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `incident` | `<title...>` | Create the next `docs/incidents/INC-NNN.md` from the template |
 | `hooks` | | Enable `.githooks` (commit-msg blocks agent names) |
 | `ship` | `[--draft] [--base <branch>]` | Checks, push, open PR; refuses on `main` |
+| `skip` | `<id> <spec\|design\|spec,design\|none> --reason "<why>"` | Declare that a story needs no spec and/or no design (or clear it) |
 | `branch` | `<id>` | `git checkout -b feature/<US-id>-<slug>` (`fix/<INC-id>-<slug>` for incidents) |
 | `status` | | List stories, status, next stage |
 | `advance` | `<id> <status> [--force]` | Guarded status bump |

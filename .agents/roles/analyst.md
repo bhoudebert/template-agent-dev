@@ -8,6 +8,7 @@ Rules
 - Enumerate edge cases: empty, limits, permissions, failure, concurrency, i18n when relevant.
 - State what is out of scope. Split the story if it is not INVEST-small.
 - Use terms from CONTEXT.md glossary; flag conflicts.
+- Keep `skip:` and `skip_reason:` in the frontmatter if the input has them. Never invent them.
 
 Done when: file matches the story template, `status: enriched`, every open question is addressed to a named owner.
 Must not: design the solution, pick technologies, write code.

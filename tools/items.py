@@ -101,6 +101,29 @@ def set_status(sid, new, force=False, root=ROOT):
     return cur, new
 
 
+def set_skip(sid, stages, reason, root=ROOT):
+    """Declare that a story needs no spec and/or no design (or clear it with an empty list)."""
+    path = Path(root) / "docs" / "stories" / f"{sid}.md"
+    if not path.exists():
+        raise SystemExit(f"no such story: {path}")
+    bad = [s for s in stages if s not in ("spec", "design")]
+    if bad:
+        raise SystemExit(f"only `spec` and `design` can be skipped, not {bad}")
+    if stages and not (reason or "").strip():
+        raise SystemExit("--reason is required: say why this story needs no " + " / ".join(stages))
+    text = path.read_text(encoding="utf-8")
+    m = re.match(r"^(---[ \t]*\n)(.*?)(\n---[ \t]*(?:\n|$))", text, re.DOTALL)
+    if not m:
+        raise SystemExit(f"{path}: no frontmatter")
+    lines = [l for l in m.group(2).split("\n") if not re.match(r"^(skip|skip_reason):", l)]
+    if stages:
+        clean = re.sub(r"[\r\n#]+", " ", reason).strip()
+        at = next((i for i, l in enumerate(lines) if l.startswith("status:")), len(lines) - 1) + 1
+        lines[at:at] = [f"skip: [{', '.join(stages)}]", f"skip_reason: {clean}"]
+    path.write_text(m.group(1) + "\n".join(lines) + m.group(3) + text[m.end():], encoding="utf-8")
+    return stages
+
+
 def branch_name(item_id, root=ROOT):
     """feature/<US-id>-<slug> from the story title; fix/<INC-id>-<slug> for incidents."""
     folder, prefix = ("stories", "feature") if item_id.startswith("US-") else ("incidents", "fix")
@@ -121,6 +144,10 @@ def main(argv=None):
     sub.add_parser("new-incident").add_argument("title", nargs="+")
     sub.add_parser("list")
     sub.add_parser("branch").add_argument("id")
+    sk = sub.add_parser("skip")
+    sk.add_argument("id")
+    sk.add_argument("stages", help="spec, design, spec,design, or none to clear")
+    sk.add_argument("--reason", default="")
     s = sub.add_parser("set-status")
     s.add_argument("id")
     s.add_argument("status")
@@ -137,6 +164,13 @@ def main(argv=None):
     elif a.cmd == "new-incident":
         iid, path = new_incident(" ".join(a.title))
         print(f"created {os.path.relpath(path, ROOT)}\nnext: paste evidence, then `mise run diagnose {iid}`")
+    elif a.cmd == "skip":
+        stages = [] if a.stages.strip().lower() == "none" else [s.strip() for s in a.stages.split(",") if s.strip()]
+        set_skip(a.id, stages, a.reason)
+        if stages:
+            print(f"{a.id}: skips {stages} ({a.reason}). `mise run next {a.id}` shows the shortened path.")
+        else:
+            print(f"{a.id}: nothing skipped")
     elif a.cmd == "branch":
         import subprocess
         name = branch_name(a.id)

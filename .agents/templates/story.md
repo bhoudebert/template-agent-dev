@@ -4,6 +4,9 @@ type: story
 title: Short imperative title
 status: enriched
 owner: product-owner
+# keep these two lines if the input has them (the story needs no spec/design):
+# skip: [spec, design]
+# skip_reason: why
 ---
 
 ## Story

@@ -187,6 +187,29 @@ def single_target_fallback(response, out_globs):
     return {}
 
 
+PRESERVED_STORY_KEYS = ("skip", "skip_reason")
+
+
+def preserve_keys(old_text, new_text, keys=PRESERVED_STORY_KEYS):
+    """Re-add frontmatter lines (skip, skip_reason) the rewrite dropped; never overwrite what it set."""
+    fm = re.compile(r"^---[ \t]*\n(.*?)\n---[ \t]*(?:\n|$)", re.DOTALL)
+    om, nm = fm.match(old_text or ""), fm.match(new_text or "")
+    if not om or not nm:
+        return new_text
+    add = []
+    for k in keys:
+        line = re.search(rf"^{k}:.*$", om.group(1), re.M)
+        if line and not re.search(rf"^{k}:", nm.group(1), re.M):
+            add.append(line.group(0))
+    if not add:
+        return new_text
+    return new_text[: nm.end(1)] + "\n" + "\n".join(add) + new_text[nm.end(1):]
+
+
+def is_story_path(rel):
+    return fnmatch.fnmatch(rel, "docs/stories/*.md")
+
+
 def preflight(stage_name, item_id, root=ROOT):
     """Problems that make a stage pointless to run. [] when fine."""
     if stage_name == "story":
@@ -265,6 +288,8 @@ def cmd_run(args, root=ROOT):
         for path, content in accepted.items():
             target = Path(root) / path
             target.parent.mkdir(parents=True, exist_ok=True)
+            if is_story_path(path) and target.exists():
+                content = preserve_keys(target.read_text(encoding="utf-8"), content)
             target.write_text(content, encoding="utf-8")
         errs = run_checks(stage, list(accepted), root)
         for e in errs:
