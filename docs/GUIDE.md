@@ -176,6 +176,45 @@ python3 tools/agentrun.py run diagnose --id INC-001 --apply
 ```
 Output is a ranked hypothesis list and recommended actions. A human executes any mitigation.
 
+## Adopting the kit in an existing repository
+
+The kit installs into another repo on a branch, as one commit, and updates the same way. You always review
+the change as a diff in a PR; nothing is pushed for you and `main` is never touched.
+
+```sh
+git clone <kit-url> ~/src/agentkit                       # once
+cd ~/src/agentkit
+mise run kit:install ../my-repo --plan                   # see what it would do
+mise run kit:install ../my-repo --with ci,docs           # branch chore/agentkit-install, one commit
+cd ../my-repo && mise run ship                           # review the diff as a PR
+```
+
+Later, to update:
+
+```sh
+git -C ~/src/agentkit pull                               # a newer kit
+cd ../my-repo
+mise run kit:status                                      # clean / you edited / kit changed / both
+mise run kit:update --plan                               # what would change
+mise run kit:update                                      # branch chore/agentkit-update-<version>
+mise run kit:update tools                                # only tools, hooks, schemas, templates
+mise run kit:update ci                                   # CI is refreshed only when you ask
+```
+
+What happens to each kind of file:
+
+| Class | Examples | On update |
+|---|---|---|
+| managed | `tools/*`, `.githooks/*`, `.agents/schemas`, `.agents/templates`, kit workflows | overwritten (a local edit shows as a deletion in the PR) |
+| tailorable | `.agents/roles`, `skills`, `policies`, `pipeline.yaml` | 3-way merged; a real conflict is left as `<<<<<<< local` markers and listed in `.agentkit/CHANGES.md` |
+| block | `AGENTS.md`, `.gitignore` | only the region between `agentkit:begin` and `agentkit:end` is rewritten; your text is untouched |
+| side | kit tasks in `.config/mise/conf.d/agentkit.toml` | overwritten; your own `mise.toml` is never edited, and your task names win a clash |
+| seed | `CONTEXT.md`, `.env.example`, the empty `docs/*` folders | copied once, then yours; never updated |
+
+Your own files are never overwritten on install: a collision keeps yours and says so. To stop the kit
+touching a file, list it (globs) in `.agentkit/ignore`. `mise run kit:check` (and CI) fails while conflict
+markers remain.
+
 ## Driving everything from a prompt (Claude Code, Codex, Copilot)
 
 You can run the same workflow from an assistant's prompt instead of typing `mise` commands. The recipe is

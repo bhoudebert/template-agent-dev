@@ -25,6 +25,10 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `prepare` | `<stage> <id>` | Prompt mode: write `.agents/out/bundle-<stage>-<id>.md` and print the receipt |
 | `apply` | `<stage> <id> --receipt <code> (--response <file> \| --worktree)` | Prompt mode: verify receipt, confine, validate, trace, log |
 | `index` / `index:check` | | Regenerate / verify `docs/INDEX.md` |
+| `kit:install` | `<target> [--with ci,docs,release] [--plan]` | Install the kit into another repository, on a branch, one commit |
+| `kit:status` | | In an adopting repo: clean / you edited / kit changed / both |
+| `kit:update` | `[tools\|agents\|docs\|ci\|all] [--plan]` | Update the kit on a new branch; `ci` only when asked |
+| `kit:check` | | Fail on unresolved conflict markers in kit files |
 | `evidence` | | Evidence floor: from `implemented` on, the branch must change a spec or a test, or waive `tests` |
 | `check` | | `validate` + `trace` + `test` |
 | `test` | | The **project's** tests: auto-detects `npm test`, pytest, `go test`, `cargo test`, `mvn test` (`tools/projecttest.sh`) |

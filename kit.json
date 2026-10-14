@@ -1,0 +1,221 @@
+{
+  "name": "agentkit",
+  "doc": "Manifest of what `tools/agentkit.py` installs into another repository. Classes: managed (kit-owned, overwritten on update), tailorable (3-way merged), block (kit-owned region inside a shared file), side (kit file placed next to the project's own), seed (copied once, then the project's). Scopes: tools, agents, ci, docs. `{path}` is the source path, `{name}` its base name.",
+  "features": {
+    "core": {
+      "default": true,
+      "doc": "tools, hooks, schemas, templates, roles, skills, policies, pipeline, AGENTS.md block, mise tasks"
+    },
+    "ci": {
+      "default": false,
+      "doc": "GitHub workflows, installed once as agentkit-*.yml; refreshed only by `update ci`"
+    },
+    "docs": {
+      "default": false,
+      "doc": "the kit documentation under docs/agentkit/"
+    },
+    "release": {
+      "default": false,
+      "doc": "release-please workflow, config and manifest (the config and manifest are seeds)"
+    }
+  },
+  "entries": [
+    {
+      "feature": "core",
+      "scope": "tools",
+      "class": "managed",
+      "match": "tools/*.py",
+      "exclude": [
+        "tools/tests/*",
+        "tools/build_site.py"
+      ],
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "tools",
+      "class": "managed",
+      "match": "tools/*.sh",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "tools",
+      "class": "managed",
+      "match": ".githooks/*",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "tools",
+      "class": "managed",
+      "match": ".agents/schemas/*",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "tools",
+      "class": "managed",
+      "match": ".agents/templates/*",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "tools",
+      "class": "side",
+      "match": "mise.toml",
+      "dst": ".config/mise/conf.d/agentkit.toml",
+      "drop_tasks": [
+        "site",
+        "site:build",
+        "install:github",
+        "install:tools",
+        "kit:install"
+      ]
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "tailorable",
+      "match": ".agents/roles/*",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "tailorable",
+      "match": ".agents/skills/*",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "tailorable",
+      "match": ".agents/policies/*",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "tailorable",
+      "match": ".agents/pipeline.yaml",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "block",
+      "match": "AGENTS.md",
+      "dst": "AGENTS.md"
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "block",
+      "match": ".gitignore",
+      "dst": ".gitignore"
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "seed",
+      "match": "CONTEXT.md",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "seed",
+      "match": ".env.example",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "seed",
+      "match": ".github/pull_request_template.md",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "seed",
+      "match": "docs/*/.gitkeep",
+      "dst": "{path}"
+    },
+    {
+      "feature": "core",
+      "scope": "agents",
+      "class": "seed",
+      "match": "openspec/*/.gitkeep",
+      "dst": "{path}"
+    },
+    {
+      "feature": "ci",
+      "scope": "ci",
+      "class": "managed",
+      "match": "adapters/github/workflows/*.yml",
+      "dst": ".github/workflows/agentkit-{name}",
+      "exclude": [
+        "adapters/github/workflows/pages.yml",
+        "adapters/github/workflows/release-please.yml"
+      ]
+    },
+    {
+      "feature": "docs",
+      "scope": "docs",
+      "class": "managed",
+      "match": "docs/WORKFLOW.md",
+      "dst": "docs/agentkit/{name}"
+    },
+    {
+      "feature": "docs",
+      "scope": "docs",
+      "class": "managed",
+      "match": "docs/GUIDE.md",
+      "dst": "docs/agentkit/{name}"
+    },
+    {
+      "feature": "docs",
+      "scope": "docs",
+      "class": "managed",
+      "match": "docs/ARCHITECTURE.md",
+      "dst": "docs/agentkit/{name}"
+    },
+    {
+      "feature": "docs",
+      "scope": "docs",
+      "class": "managed",
+      "match": "docs/REFERENCE.md",
+      "dst": "docs/agentkit/{name}"
+    },
+    {
+      "feature": "docs",
+      "scope": "docs",
+      "class": "managed",
+      "match": "docs/TUTORIAL.md",
+      "dst": "docs/agentkit/{name}"
+    },
+    {
+      "feature": "release",
+      "scope": "agents",
+      "class": "seed",
+      "match": "release-please-config.json",
+      "dst": "{path}"
+    },
+    {
+      "feature": "release",
+      "scope": "ci",
+      "class": "managed",
+      "match": "adapters/github/workflows/release-please.yml",
+      "dst": ".github/workflows/agentkit-{name}"
+    },
+    {
+      "feature": "release",
+      "scope": "agents",
+      "class": "seed",
+      "match": ".release-please-manifest.json",
+      "dst": "{path}"
+    }
+  ]
+}
