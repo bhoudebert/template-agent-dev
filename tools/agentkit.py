@@ -31,7 +31,16 @@ MARK_HASH = ("# agentkit:begin", "# agentkit:end")
 DEFAULT_UPDATE_SCOPES = ["tools", "agents", "docs"]   # `ci` is refreshed only when asked for
 ALL_SCOPES = ["tools", "agents", "docs", "ci"]
 SKIP_DIRS = {".git", "__pycache__", "node_modules", ".venv"}
-CONFLICT_RE = ("<<<<<<< local", ">>>>>>> kit")
+import re
+
+# A real conflict region (from `git merge-file -L local -L base -L kit`) has these exact marker lines.
+# Anchored, so documentation or code that merely *mentions* them is not a conflict.
+_OPEN = re.compile(r"^<<<<<<< local$", re.M)
+_CLOSE = re.compile(r"^>>>>>>> kit$", re.M)
+
+
+def has_conflict(text):
+    return bool(_OPEN.search(text) and _CLOSE.search(text))
 
 
 # ---------------------------------------------------------------- helpers
@@ -504,7 +513,7 @@ def cmd_check(args):
     bad = []
     for dst in (lock or {}).get("files", {}):
         p = target.path(dst)
-        if p.is_file() and any(m in p.read_text(encoding="utf-8", errors="replace") for m in CONFLICT_RE):
+        if p.is_file() and has_conflict(p.read_text(encoding="utf-8", errors="replace")):
             bad.append(dst)
     for b in bad:
         print(f"CONFLICT MARKERS in {b}")

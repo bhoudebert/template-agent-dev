@@ -129,6 +129,19 @@ class Install(unittest.TestCase):
             cli("install", "--target", d)
 
 
+class ConflictDetection(unittest.TestCase):
+    def test_only_real_marker_lines_count(self):
+        real = "a\n<<<<<<< local\nmine\n||||||| base\nold\n=======\ntheirs\n>>>>>>> kit\nb\n"
+        self.assertTrue(agentkit.has_conflict(real))
+        mention = 'CONFLICT = ("<<<<<<< local", ">>>>>>> kit")\n<<<<<<< local   the project version\n>>>>>>> kit  the new one\n'
+        self.assertFalse(agentkit.has_conflict(mention))
+
+    def test_a_fresh_install_has_no_conflicts_even_though_the_kit_documents_the_markers(self):
+        d = host_repo()
+        cli("install", "--target", d)
+        self.assertEqual(cli("check", "--target", d), 0)
+
+
 class Identity(unittest.TestCase):
     def test_missing_git_identity_gives_a_clear_message(self):
         import os
