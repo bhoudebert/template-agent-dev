@@ -165,6 +165,10 @@ the committed index is stale.
 `advance` may step over the skipped statuses. A project with no ADRs has an empty ADR section, and
 `Refs: none` is a valid PR citation.
 
+Skipping never removes the **evidence floor** (`tools/evidence.py`): from `implemented` on, the branch's diff must
+include a changed spec or a changed test, or an explicit `skip: [tests]` waiver with a reason. It is verified
+from git, not from what an agent says, and runs locally (`mise run evidence`, `ship`) and in CI.
+
 ## The review design
 
 The reviewer is a normal stage (`review`) whose input is `@diff`. Two decisions make it useful.

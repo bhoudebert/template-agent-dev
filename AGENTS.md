@@ -46,6 +46,8 @@ The same recipe applies; only the model differs. Never do stage work from memory
 | "I approve" | `mise run advance <id> <status>` (the status the user approved) |
 | "ship it" | `mise run ship` (never merge) |
 
+Evidence floor: a story that changes behaviour leaves a spec change or a test change (a non-regression test counts). Docs/config/infra only: `skip: [tests]` with a reason. `mise run evidence` checks it.
+
 Search before you change behaviour: `docs/INDEX.md`, then `openspec/specs` and `docs/decisions`. Cite the story, requirement and ADR ids you implement in commits and PR bodies (`Refs: US-001, ADR-0002`); `Refs: none` is a valid answer, and not every story needs a spec, design or ADR (`skip:` in the story).
 
 ## Rules (all roles)

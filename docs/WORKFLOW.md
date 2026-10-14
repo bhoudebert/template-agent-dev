@@ -33,6 +33,19 @@ Not every story needs a spec, a design or an ADR. A story that does not (a copy 
 next stage that applies, and `mise run advance US-002 designed` may step over the skipped statuses. QA, review
 and the PR gate still apply.
 
+**`specified` is not required** when `spec` is skipped, and `designed` is not required when `design` is. But
+skipping a spec never means "no evidence": the **evidence floor** applies to every story. By the time a story
+is `implemented`, its change must include **at least one** of:
+
+| Evidence | Examples |
+|---|---|
+| A changed spec | a new or updated `openspec/specs/**` or change |
+| A changed test | a new test, a fixed test, a **non-regression test** for a bug |
+| An explicit waiver | `skip: [tests]` + `skip_reason`, for docs, config or infra only (`mise run skip US-003 tests --reason "docs only"`) |
+
+`mise run evidence` checks it from the real git diff; CI runs it on every PR and `mise run ship` runs it before
+pushing. Before `implemented` it only informs, so an early draft PR is never blocked.
+
 ## The status ladder
 
 The story file's `status:` is the single source of truth for where a work item is.
@@ -150,7 +163,7 @@ Rules of thumb:
 ## Definition of done for a story
 
 - [ ] Story approved; every open question answered
-- [ ] Every acceptance criterion has a spec scenario and a test
+- [ ] Every acceptance criterion has a spec scenario and a test (a skipped spec still leaves a changed test, or a reasoned `skip: [tests]`)
 - [ ] ADR accepted for each real decision
 - [ ] `tasks.md` fully checked
 - [ ] `mise run check` is green

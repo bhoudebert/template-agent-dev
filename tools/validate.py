@@ -73,11 +73,11 @@ def check_file(path, root=ROOT):
     if kind == "story":
         skip = meta.get("skip") or []
         skip = skip if isinstance(skip, list) else [skip]
-        bad = [s for s in skip if s not in ("spec", "design")]
+        bad = [s for s in skip if s not in ("spec", "design", "tests")]
         if bad:
-            errs.append(f"{rel}: `skip` may only contain spec and design, not {bad}")
+            errs.append(f"{rel}: `skip` may only contain spec, design and tests, not {bad}")
         if skip and not meta.get("skip_reason"):
-            errs.append(f"{rel}: `skip` needs a `skip_reason` (say why this story needs no spec/design)")
+            errs.append(f"{rel}: `skip` needs a `skip_reason` (say why this story needs no spec/design/tests)")
     secs = _sections(body)
     for name in schema.get("sections", []):
         if name.lower() not in secs:
