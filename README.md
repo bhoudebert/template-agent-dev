@@ -10,6 +10,8 @@ Short commands: `mise tasks` (see GUIDE section 0).
 
 **Start here: [docs/GUIDE.md](docs/GUIDE.md)** (setup, walkthrough, troubleshooting).
 
+More: [docs/WORKFLOW.md](docs/WORKFLOW.md) (who does what, when), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/REFERENCE.md](docs/REFERENCE.md). Browse them as a website: `mise run site` (open http://localhost:8000).
+
 ## Layers
 1. **Content** (portable markdown/yaml): `AGENTS.md`, `CONTEXT.md`, `.agents/{roles,skills,policies,templates,schemas,pipeline.yaml}`, `openspec/`, `docs/`.
 2. **Core** (stdlib Python): `tools/agentrun.py` runner, `validate.py`, `trace_check.py`, `providers.py`.

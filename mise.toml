@@ -49,6 +49,13 @@ arg "<title>" var=#true help="Incident title"
 '''
 run = 'python3 tools/items.py new-incident ${usage_title}'
 
+[tasks.branch]
+description = "Create the story branch feature/<US-id>-<slug> (fix/<INC-id>-<slug> for incidents)"
+usage = '''
+arg "<id>" help="US-002 or INC-001"
+'''
+run = 'python3 tools/items.py branch "${usage_id}"'
+
 [tasks.status]
 description = "List stories, their status and the next stage"
 run = "python3 tools/items.py list"
@@ -165,6 +172,14 @@ flag "--plan"
 run = 'sh tools/stage.sh "${usage_stage}" "${usage_id}" "${usage_dry}" "${usage_plan}"'
 
 # ---------- setup ----------
+[tasks.site]
+description = "Build the documentation website and serve it on http://localhost:8000"
+run = "python3 tools/build_site.py --serve"
+
+[tasks."site:build"]
+description = "Build site/docs/*.html from docs/*.md"
+run = "python3 tools/build_site.py"
+
 [tasks."install:github"]
 description = "Copy CI + agent workflows to .github/workflows"
 run = "sh adapters/install.sh github"

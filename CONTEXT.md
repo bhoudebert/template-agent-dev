@@ -14,7 +14,8 @@ One paragraph: what it is, who uses it, why it exists.
 - Language/runtime:
 - Build/test commands:
 - Code style / lint:
-- Branching and PR conventions:
+- Branching and PR conventions: trunk-based. `main` + `feature/<US-id>-<slug>` per story, squash-merge, PR title = Conventional Commit (`feat(US-002): ...`).
+- Versioning: SemVer, automated by release-please (release PR on `main`, tags `vX.Y.Z`, `CHANGELOG.md` generated). Details: `.agents/policies/git.md`.
 
 ## Constraints
 - Compliance, performance, availability targets, supported platforms.

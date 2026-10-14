@@ -27,10 +27,12 @@ mise run status                         # all stories, status, next stage
 | `story` `spec` `design` `implement` `qa` `review` `release` `diagnose` (alias of `agent:<stage>`) | run a stage on `<id>`; flags `--dry` (prompt only), `--plan` (call LLM, write nothing) |
 | `agent:test <id>` | test-engineer stage (`test` is the unit-test task) |
 | `agent <stage> <id>` | same, any stage |
+| `branch <id>` | create `feature/<US-id>-<slug>` |
 | `advance <id> <status>` | set story status; refuses skipped steps or broken traceability (`--force` overrides) |
 | `check`, `validate`, `trace`, `test` | deterministic checks |
 | `doctor`, `env`, `stages`, `status` | inspect setup / pipeline / items |
 | `install:github`, `install:tools` | wire CI and tool pointers |
+| `site` / `site:build` | build and serve / only build the documentation website |
 
 The plain `python3 tools/...` commands in the rest of this guide still work without mise.
 
@@ -167,12 +169,19 @@ python3 tools/agentrun.py run diagnose --id INC-001 --apply
 ```
 Output is a ranked hypothesis list and recommended actions. A human executes any mitigation.
 
+## Git, versions, releases
+
+- **Branches**: only `main` (always releasable) + one `feature/<US-id>-<slug>` per story. `mise run branch US-002` creates it. Squash-merge PRs.
+- **Commits / PR title**: Conventional Commits with the story id as scope: `feat(US-002): export invoices as CSV`, `fix(US-002): ...`, `feat(US-002)!: ...` for breaking. CI rejects other PR titles.
+- **Versions**: SemVer via [release-please](https://github.com/googleapis/release-please). It maintains a release PR on `main`; merging it tags `vX.Y.Z` and updates `CHANGELOG.md`. Never edit changelog, version or tags by hand. Set `release-type` in `release-please-config.json` for your stack.
+- Policy text agents read: `.agents/policies/git.md`.
+
 ## 4. Automating in CI (GitHub)
 
 ```sh
 adapters/install.sh github tools
 ```
-- Copies workflows to `.github/workflows/`: `ci.yml` (validate, trace, tests), `agent-review.yml` (comments on PRs), `agent-triage.yml` (label an issue `agent:enrich` -> PR with enriched story).
+- Copies workflows to `.github/workflows/`: `ci.yml` (PR title check, validate, trace, tests), `release-please.yml`, `agent-review.yml` (comments on PRs), `agent-triage.yml` (label an issue `agent:enrich` -> PR with enriched story).
 - Add repo secret `AGENT_API_KEY` and variables `AGENT_BASE_URL`, `AGENT_MODEL_STRONG`, `AGENT_MODEL_CHEAP`.
 - Local models need a self-hosted runner that can reach them.
 - Name PR branches `feature/US-002-...` so the reviewer finds the story id.

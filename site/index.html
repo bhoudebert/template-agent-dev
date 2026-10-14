@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgenticDev · an agent at every step, a human at every gate</title>
+<meta name="description" content="A vendor-neutral template for an agentic software lifecycle: story, spec, design, code, tests, QA, review, release and incident diagnosis. One role-agent per step, artifacts in git, a human at every gate. Works with local models, any OpenAI-compatible API or any CLI.">
+<meta property="og:title" content="AgenticDev: an agent at every step, a human at every gate">
+<meta property="og:description" content="From request to production with one role-agent per step, artifacts in git, and people deciding at every gate. Bring any model.">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script>document.documentElement.className += " js";</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header>
+  <div class="wrap"><nav aria-label="Main">
+    <a class="brand" href="#top"><span class="mark" aria-hidden="true">A</span>AgenticDev</a>
+    <div class="links">
+      <a href="#loop">Whose turn</a>
+      <a href="#status">Status</a>
+      <a href="#dev">Developer</a>
+      <a href="#story">Example</a>
+      <a href="#git">Git</a>
+      <a href="#safety">Safety</a>
+      <a href="docs/workflow.html">Docs</a>
+      <a class="btn primary" href="#quick">Quick start</a>
+    </div>
+  </nav></div>
+</header>
+
+<main id="main">
+<!-- ============ HERO ============ -->
+<section class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">Vendor-neutral &middot; local models welcome &middot; zero dependencies</span>
+      <h1>An agent at every step. <em>A human at every gate.</em></h1>
+      <p class="lede">From a rough request to a tagged release and a production incident, one role-agent per step. Everything is a file in git, every step ends with a person deciding, and nothing reaches <code>main</code> except through a pull request.</p>
+      <div class="cta">
+        <a class="btn primary" href="#loop">See whose turn it is</a>
+        <a class="btn" href="docs/guide.html">Read the guide</a>
+      </div>
+      <div class="install">
+        <code id="cmd">git clone https://github.com/bhoudebert/template-agent-dev &amp;&amp; cd template-agent-dev &amp;&amp; mise run doctor</code>
+        <button type="button" class="copy" data-copy-id="cmd" aria-label="Copy the install command">Copy</button>
+      </div>
+    </div>
+    <div class="term" role="img" aria-label="Terminal example: create a story, plan the story stage, advance status, run checks">
+      <div class="bar">~/my-product &mdash; feature/US-002-export-invoices-as-csv</div>
+      <div class="body">
+<div class="l"><span class="c">$</span> mise run new "Export invoices as CSV"</div>
+<div class="l"><span class="d">created docs/stories/US-002.md</span></div>
+<div class="l"><span class="c">$</span> mise run branch US-002</div>
+<div class="l"><span class="c">$</span> mise run story US-002 --plan</div>
+<div class="l"><span class="d">WOULD WRITE docs/stories/US-002.md</span></div>
+<div class="l"><span class="y">gate: human:product-owner</span>   <span class="d"># your turn</span></div>
+<div class="l"><span class="c">$</span> mise run advance US-002 approved</div>
+<div class="l"><span class="g">US-002: enriched -> approved</span></div>
+<div class="l"><span class="c">$</span> mise run check</div>
+<div class="l"><span class="g">validate: 0 error(s)  trace_check: 0 problem(s)</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW ============ -->
+<section id="how">
+  <div class="wrap">
+    <span class="kicker">How it fits together</span>
+    <h2>Three layers. Only the thin one knows your vendor.</h2>
+    <p class="lede">Roles, rules and artifacts are plain Markdown. The runner is a small script with no dependencies. Anything specific to a CI host or an AI product sits in a replaceable adapter.</p>
+    <div class="cols c3">
+      <div class="card"><h3>1 &middot; Content</h3><p><code>AGENTS.md</code>, <code>CONTEXT.md</code>, nine roles, skills, policies, templates, schemas and <code>pipeline.yaml</code>. Portable between any model or tool.</p></div>
+      <div class="card"><h3>2 &middot; Core</h3><p><code>tools/agentrun.py</code> builds the prompt, calls a model, keeps only allowed files, runs checks. <code>validate</code> and <code>trace_check</code> are plain scripts.</p></div>
+      <div class="card"><h3>3 &middot; Adapters</h3><p>GitHub workflows, <code>mise</code> tasks, pointers for Claude Code, Copilot and Cursor. Swap them without touching layers 1 and 2.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOOP / STAGE EXPLORER ============ -->
+<section class="soft" id="loop">
+  <div class="wrap">
+    <span class="kicker">Whose turn is it?</span>
+    <h2>Nine stages. Each one: you prepare, an agent works, you decide.</h2>
+    <p class="lede">Pick a stage to see what you do before, what the agent does, what you must check, and what you do after.</p>
+    <div class="legend">
+      <span class="who you">You</span> a person
+      <span class="who agent">Agent</span> a role-agent
+      <span class="who ci">CI</span> automated checks
+      <span class="who rel">release-please</span> versioning bot
+    </div>
+    <div class="tabs" role="tablist" aria-label="Pipeline stages" id="tabs"></div>
+
+    <article class="stage" id="s-story" data-label="Story">
+      <header><h3>1 &middot; Story</h3><span class="meta">role analyst &middot; gate product owner</span></header>
+      <div class="beats">
+        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>Create the item and its branch</li><li>Write the request in your own words</li></ul></div>
+        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Turns the request into a story: Given/When/Then criteria, edge cases, out of scope, open questions.</p></div>
+        <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>Are the criteria what you meant?</li><li>Every open question answered</li><li>Small enough to ship alone</li></ul></div>
+        <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li><code>advance US-002 approved</code></li><li>Commit on the story branch</li></ul></div>
+      </div>
+      <div class="io"><div><b>Reads</b><code>docs/stories/US-002.md</code> <code>CONTEXT.md</code></div><div><b>Writes</b><code>docs/stories/US-002.md</code></div><div><b>Status</b>draft &rarr; enriched (agent) &rarr; approved (you)</div></div>
+      <div class="cmd"><code>mise run new "Export invoices as CSV" &amp;&amp; mise run branch US-002 &amp;&amp; mise run story US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+    </article>
+
+    <article class="stage" id="s-spec" data-label="Spec">
+      <header><h3>2 &middot; Spec</h3><span class="meta">role spec-writer &middot; gate product owner + tech lead</span></header>
+      <div class="beats">
+        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>On the story branch</li><li>Approved story committed</li></ul></div>
+        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Writes an OpenSpec change: proposal, ordered tasks, and requirement deltas with WHEN/THEN scenarios.</p></div>
+        <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>Each criterion has a scenario</li><li>Requirements say SHALL or MUST</li><li>Tasks are small and ordered</li></ul></div>
+        <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li><code>advance US-002 specified</code></li><li>Commit <code>docs(US-002): spec</code></li></ul></div>
+      </div>
+      <div class="io"><div><b>Reads</b><code>story</code> <code>openspec/specs/**</code></div><div><b>Writes</b><code>openspec/changes/US-002/**</code></div><div><b>Guard</b>change folder must exist before <code>specified</code></div></div>
+      <div class="cmd"><code>mise run spec US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+    </article>
+
+    <article class="stage" id="s-design" data-label="Design">
+      <header><h3>3 &middot; Design</h3><span class="meta">role architect &middot; gate tech lead</span></header>
+      <div class="beats">
+        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>Spec reviewed and committed</li></ul></div>
+        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Writes a design note and one ADR per real decision, with honest options and consequences.</p></div>
+        <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>At least two real options</li><li>No clash with an accepted ADR</li><li>Set ADR <code>status: accepted</code> if you agree</li></ul></div>
+        <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li><code>advance US-002 designed</code></li></ul></div>
+      </div>
+      <div class="io"><div><b>Reads</b>story, change, ADRs, architecture</div><div><b>Writes</b><code>docs/architecture/US-002.md</code> <code>docs/decisions/ADR-*.md</code></div><div><b>Guard</b>an ADR or design must reference the story</div></div>
+      <div class="cmd"><code>mise run design US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+    </article>
+
+    <article class="stage" id="s-implement" data-label="Implement">
+      <header><h3>4 &middot; Implement</h3><span class="meta">role developer &middot; gate CI + code review &middot; <a href="#dev">the loop</a></span></header>
+      <div class="beats">
+        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>Pick the next unchecked task</li><li>Preview with <code>--plan</code></li></ul></div>
+        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Writes the smallest diff that satisfies the scenarios, with tests, and ticks the task.</p></div>
+        <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>Read every line of the diff</li><li>Run the project's tests yourself</li><li>Code and spec disagree? Spec wins</li></ul></div>
+        <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li>Commit <code>feat(US-002): task</code></li><li>Repeat; when all ticked and green: <code>advance US-002 implemented</code></li></ul></div>
+      </div>
+      <div class="io"><div><b>Reads</b>change, design, ADRs, <code>src/**</code>, <code>tests/**</code></div><div><b>Writes</b><code>src/**</code> <code>tests/**</code> <code>tasks.md</code></div><div><b>Note</b>the runner never runs your build or tests</div></div>
+      <div class="cmd"><code>mise run implement US-002 --plan &amp;&amp; mise run implement US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+    </article>
+
+    <article class="stage" id="s-test" data-label="Test">
+      <header><h3>5 &middot; Test</h3><span class="meta">role test-engineer &middot; gate CI</span></header>
+      <div class="beats">
+        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>Implementation committed</li></ul></div>
+        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Maps scenarios to tests, adds integration, edge and negative tests, reports gaps and flaky risks.</p></div>
+        <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>Run the whole suite</li><li>Reject deleted or weakened tests</li></ul></div>
+        <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li>Commit <code>test(US-002): ...</code></li></ul></div>
+      </div>
+      <div class="io"><div><b>Reads</b>change, <code>src/**</code>, <code>tests/**</code></div><div><b>Writes</b><code>tests/**</code></div><div><b>Rule</b>never edits production code</div></div>
+      <div class="cmd"><code>mise run agent:test US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+    </article>
+
+    <article class="stage" id="s-qa" data-label="QA">
+      <header><h3>6 &middot; QA</h3><span class="meta">role qa &middot; gate QA or product owner</span></header>
+      <div class="beats">
+        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>Tests committed</li><li>CI green</li></ul></div>
+        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Traces every criterion and scenario to evidence. Gives a verdict and lists what it could not verify.</p></div>
+        <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>Read <em>Not verified</em></li><li><code>fail</code> or <code>blocked</code>: back to implement</li></ul></div>
+        <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li>On <code>pass</code>: <code>advance US-002 done</code></li></ul></div>
+      </div>
+      <div class="io"><div><b>Reads</b>story, change, tests, diff</div><div><b>Writes</b><code>docs/qa/US-002.md</code></div><div><b>Guard</b><code>done</code> needs a QA report with <code>verdict: pass</code></div></div>
+      <div class="cmd"><code>mise run qa US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+    </article>
+
+    <article class="stage" id="s-review" data-label="Review &amp; merge">
+      <header><h3>7 &middot; Review &amp; merge</h3><span class="meta">role reviewer &middot; gate human merge</span></header>
+      <div class="beats">
+        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>Open the PR from the story branch</li><li>Title: <code>feat(US-002): export invoices as CSV</code></li></ul></div>
+        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Reads the diff and posts one ranked comment: correctness, security, spec conformance, tests.</p></div>
+        <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>You are the reviewer; the agent is a second pair of eyes</li><li>Fix blockers and majors</li></ul></div>
+        <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li>Squash-merge into <code>main</code></li></ul></div>
+      </div>
+      <div class="io"><div><b>Reads</b>diff, change, ADRs</div><div><b>Writes</b>a PR comment (<code>.agents/out/</code>)</div><div><b>CI</b><span class="who ci">CI</span> title format, validate, trace, tests</div></div>
+      <div class="cmd"><code>mise run review US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+    </article>
+
+    <article class="stage" id="s-release" data-label="Release">
+      <header><h3>8 &middot; Release</h3><span class="meta">role release &middot; gate release manager</span></header>
+      <div class="beats">
+        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Writes human release notes, the predicted SemVer bump and a go/no-go checklist.</p></div>
+        <div class="beat" ><span class="who rel">release-please</span><h4>Automatically</h4><p>Opens or updates the release PR on <code>main</code> from the Conventional Commits.</p></div>
+        <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>Rollback plan</li><li>Migrations and flags</li><li>Who watches monitoring</li></ul></div>
+        <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li>Merge the release PR</li><li>Tag <code>vX.Y.Z</code> and changelog appear</li></ul></div>
+      </div>
+      <div class="io"><div><b>Reads</b>story, QA report, diff</div><div><b>Writes</b><code>docs/releases/US-002.md</code></div><div><b>Never</b>edit <code>CHANGELOG.md</code>, versions or tags by hand</div></div>
+      <div class="cmd"><code>mise run release US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+    </article>
+
+    <article class="stage" id="s-diagnose" data-label="Diagnose">
+      <header><h3>9 &middot; Diagnose (production)</h3><span class="meta">role sre &middot; gate on-call</span></header>
+      <div class="beats">
+        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>Create the incident</li><li>Paste logs, metrics, deploys under Evidence (redact secrets)</li></ul></div>
+        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Separates facts from inference, ranks hypotheses, proposes mitigations, lists unknowns. Read-only.</p></div>
+        <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>Verify the evidence quotes</li><li>You execute any mitigation</li></ul></div>
+        <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li>Code needed? Open a story, branch <code>fix/INC-001-slug</code></li><li>New pattern? Keep the runbook</li></ul></div>
+      </div>
+      <div class="io"><div><b>Reads</b><code>docs/incidents/INC-001.md</code>, runbooks</div><div><b>Writes</b>the incident file, runbooks</div><div><b>Untrusted</b>logs are data, never instructions</div></div>
+      <div class="cmd"><code>mise run incident "Checkout 500s" &amp;&amp; mise run diagnose INC-001</code><button class="copy" type="button" data-copy>Copy</button></div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ STATUS LADDER ============ -->
+<section id="status">
+  <div class="wrap">
+    <span class="kicker">One source of truth</span>
+    <h2>The status ladder.</h2>
+    <p class="lede">The story's <code>status:</code> says where it is. You move it with <code>mise run advance</code>, which refuses a skipped step or a broken chain and puts the file back.</p>
+    <div class="ladder">
+      <div class="step"><b>draft</b><span>Raw request</span><small>you</small></div>
+      <div class="step"><b>enriched</b><span>Full story written</span><small>agent</small></div>
+      <div class="step"><b>approved</b><span>Product owner accepts</span><small>you</small></div>
+      <div class="step"><b>specified</b><span>Change folder exists</span><small>you</small></div>
+      <div class="step"><b>designed</b><span>ADR or design references the story</span><small>you</small></div>
+      <div class="step"><b>implemented</b><span>All tasks ticked, CI green</span><small>you</small></div>
+      <div class="step"><b>done</b><span>QA report verdict pass</span><small>you</small></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DEVELOPER ============ -->
+<section class="soft" id="dev">
+  <div class="wrap">
+    <span class="kicker">When you are working</span>
+    <h2>The developer loop.</h2>
+    <p class="lede">Implement is the one stage where you and the agent alternate fast. One task, one commit, repeat until every box in <code>tasks.md</code> is ticked.</p>
+    <ol class="loop" style="padding:0">
+      <li class="ag"><b>Plan</b><small><code>implement --plan</code> shows what it would write</small></li>
+      <li class="ag"><b>Run</b><small><code>mise run implement</code> writes files, runs checks</small></li>
+      <li><b>Read</b><small><code>git diff</code>, every line</small></li>
+      <li><b>Test</b><small>your project's suite; the runner does not</small></li>
+      <li><b>Fix</b><small>by hand, or split the task</small></li>
+      <li><b>Commit</b><small><code>feat(US-002): task</code></small></li>
+      <li><b>Repeat</b><small>until tasks.md is all ticked</small></li>
+    </ol>
+    <p class="loop-back">Then <code>advance US-002 implemented</code>, run Test and QA.</p>
+    <div class="cols c2" style="margin-top:22px">
+      <div class="do"><h3>Your checklist</h3><ul>
+        <li>Be on <code>feature/&lt;US-id&gt;-&lt;slug&gt;</code>, never <code>main</code></li>
+        <li>Read the whole diff before committing</li>
+        <li>Run the tests yourself</li>
+        <li>Answer open questions; do not let the agent guess</li>
+        <li>Bump status only after the artifact exists</li>
+        <li>Open the PR with a Conventional Commit title</li>
+      </ul></div>
+      <div class="dont"><h3>Never</h3><ul>
+        <li>Let the agent "make tests pass" by editing tests</li>
+        <li>Loosen a schema or validator to get green</li>
+        <li>Commit or push directly to <code>main</code></li>
+        <li>Edit <code>CHANGELOG.md</code>, versions or tags</li>
+        <li>Paste secrets into stories, incidents or prompts</li>
+        <li>Merge on the strength of the agent's review alone</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EXAMPLE TIMELINE ============ -->
+<section id="story">
+  <div class="wrap">
+    <span class="kicker">End to end</span>
+    <h2>One story, from request to tag.</h2>
+    <p class="lede">What actually happens for <code>US-002</code>, and who is acting at each moment.</p>
+    <ol class="timeline">
+      <li class="you"><h3><span class="who you">You</span> Capture and branch</h3><p><code>mise run new "Export invoices as CSV"</code> then <code>mise run branch US-002</code>. You are on <code>feature/US-002-export-invoices-as-csv</code>; status <code>draft</code>.</p></li>
+      <li><h3><span class="who agent">Agent</span> Story</h3><p>Analyst writes criteria, edge cases and open questions. Status becomes <code>enriched</code>.</p></li>
+      <li class="you"><h3><span class="who you">You</span> Approve</h3><p>Answer questions, edit, <code>advance US-002 approved</code>, commit <code>docs(US-002): approve story</code>.</p></li>
+      <li><h3><span class="who agent">Agent</span> Spec, then design</h3><p>OpenSpec change, then design note and ADR. After each, you review and advance to <code>specified</code>, then <code>designed</code>.</p></li>
+      <li class="you"><h3><span class="who you">You</span> + <span class="who agent">Agent</span> Build</h3><p>The developer loop, one task per commit: <code>feat(US-002): csv writer</code>, <code>feat(US-002): download endpoint</code>. Then the test and QA stages; QA <code>pass</code> allows <code>done</code>.</p></li>
+      <li class="ci"><h3><span class="who ci">CI</span> + <span class="who agent">Agent</span> Pull request</h3><p>You open a PR titled <code>feat(US-002): export invoices as CSV</code>. CI checks the title, validates artifacts, checks traceability, runs tests. The reviewer agent comments.</p></li>
+      <li class="you"><h3><span class="who you">You</span> Merge</h3><p>Fix blockers, squash-merge. One commit lands on <code>main</code>.</p></li>
+      <li class="rel"><h3><span class="who rel">release-please</span> Release PR</h3><p>Sees a <code>feat</code>, opens <code>chore(main): release 1.1.0</code> with the changelog.</p></li>
+      <li class="you"><h3><span class="who you">You</span> Ship</h3><p>Merge the release PR. Tag <code>v1.1.0</code> and the GitHub release are created.</p></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ GIT ============ -->
+<section class="soft" id="git">
+  <div class="wrap">
+    <span class="kicker">Branches, commits, versions</span>
+    <h2>PR mode, always. Trunk-based.</h2>
+    <p class="lede">One long-lived branch. One short-lived branch per story. Conventional Commits drive SemVer through release-please.</p>
+    <figure>
+      <svg viewBox="0 0 880 250" role="img" aria-labelledby="gt gd">
+        <title id="gt">Git flow</title>
+        <desc id="gd">A story branch leaves main, collects commits, and is squash-merged by pull request. release-please then opens a release pull request which, once merged, creates the tag v1.1.0.</desc>
+        <line x1="20" y1="50" x2="860" y2="50" stroke="#2563eb" stroke-width="3"/>
+        <text x="20" y="32" class="mono">main</text>
+        <circle cx="60" cy="50" r="7" fill="#2563eb"/><text x="60" y="76" text-anchor="middle" class="mono muted">v1.0.0</text>
+        <path d="M120 50 C140 50 140 150 170 150" fill="none" stroke="#b45309" stroke-width="3"/>
+        <line x1="170" y1="150" x2="470" y2="150" stroke="#b45309" stroke-width="3"/>
+        <path d="M470 150 C500 150 500 50 530 50" fill="none" stroke="#b45309" stroke-width="3"/>
+        <circle cx="120" cy="50" r="5" fill="#2563eb"/>
+        <g fill="#b45309"><circle cx="210" cy="150" r="6"/><circle cx="290" cy="150" r="6"/><circle cx="370" cy="150" r="6"/><circle cx="440" cy="150" r="6"/></g>
+        <text x="170" y="185" class="mono">feature/US-002-export-invoices-as-csv</text>
+        <text x="210" y="125" text-anchor="middle" class="muted">docs: spec</text>
+        <text x="290" y="125" text-anchor="middle" class="muted">docs: design</text>
+        <text x="370" y="125" text-anchor="middle" class="muted">feat: task</text>
+        <text x="440" y="125" text-anchor="middle" class="muted">test + qa</text>
+        <circle cx="530" cy="50" r="7" fill="#2563eb"/>
+        <text x="530" y="20" text-anchor="middle">PR squash-merge</text>
+        <text x="530" y="76" text-anchor="middle" class="mono muted">feat(US-002)</text>
+        <rect x="590" y="88" width="150" height="34" rx="8" fill="#dcfce7" stroke="#15803d"/>
+        <text x="665" y="109" text-anchor="middle">release PR (auto)</text>
+        <path d="M665 88 C665 70 700 66 720 50" fill="none" stroke="#15803d" stroke-width="2" stroke-dasharray="4 4"/>
+        <circle cx="760" cy="50" r="7" fill="#15803d"/>
+        <text x="760" y="20" text-anchor="middle">merge release PR</text>
+        <text x="760" y="76" text-anchor="middle" class="mono muted">tag v1.1.0</text>
+      </svg>
+      <figcaption>Squash-merge keeps one Conventional Commit per story on <code>main</code>.</figcaption>
+    </figure>
+    <div class="tbl" style="margin-top:22px"><table>
+      <thead><tr><th>Commit / PR title</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td><code>feat(US-002): export invoices as CSV</code></td><td>minor</td></tr>
+        <tr><td><code>fix(US-002): escape quotes</code></td><td>patch</td></tr>
+        <tr><td><code>feat(US-002)!: drop legacy export</code> or <code>BREAKING CHANGE:</code></td><td>major</td></tr>
+        <tr><td><code>docs</code> <code>test</code> <code>refactor</code> <code>perf</code> <code>build</code> <code>ci</code> <code>chore</code></td><td>no release by themselves</td></tr>
+      </tbody></table></div>
+    <p>Non-story work uses <code>chore/&lt;slug&gt;</code> or <code>docs/&lt;slug&gt;</code>. Incidents use <code>fix/INC-001-&lt;slug&gt;</code>.</p>
+  </div>
+</section>
+
+<!-- ============ SAFETY ============ -->
+<section id="safety">
+  <div class="wrap">
+    <span class="kicker">Guard rails</span>
+    <h2>Agents propose. Scripts check. People decide.</h2>
+    <div class="cols c3">
+      <div class="card"><h3>Writes are confined</h3><p>Each stage may only write paths in its <code>out</code> list. Absolute paths and <code>..</code> are discarded.</p></div>
+      <div class="card"><h3>Inputs are data</h3><p>Issues, logs and PR text are wrapped as untrusted data. Instructions inside them are ignored by policy.</p></div>
+      <div class="card"><h3>Deterministic checks</h3><p>Schema, sections, Given/When/Then, spec scenarios and the story-to-QA chain are checked by scripts, not opinions.</p></div>
+      <div class="card"><h3>Humans own gates</h3><p>Agents never merge, deploy, tag or touch production. The runner has no code path for it.</p></div>
+      <div class="card"><h3>PR mode, always</h3><p>No direct commits to <code>main</code>. Every change is a branch, a reviewed PR and a squash-merge.</p></div>
+      <div class="card"><h3>Audit trail</h3><p>Every applied run logs stage, provider, prompt hash, files written and check errors to <code>.agents/runs/</code>.</p></div>
+    </div>
+    <p style="margin-top:18px;color:var(--muted)">What is not guarded: whether the content is <em>right</em>. That is what the gates are for.</p>
+  </div>
+</section>
+
+<!-- ============ MODELS ============ -->
+<section class="soft" id="models">
+  <div class="wrap">
+    <span class="kicker">Bring any model</span>
+    <h2>Local, hosted or a CLI you already use.</h2>
+    <div class="cols c3">
+      <div class="card"><h3>Local server</h3><p>Ollama, vLLM, llama.cpp, LM Studio</p><pre><code>AGENT_PROVIDER=openai
+AGENT_BASE_URL=http://localhost:11434/v1
+AGENT_MODEL=gemma4:12b</code></pre></div>
+      <div class="card"><h3>Hosted API</h3><p>Any OpenAI-compatible endpoint</p><pre><code>AGENT_PROVIDER=openai
+AGENT_BASE_URL=https://api.example/v1
+AGENT_API_KEY=...
+AGENT_MODEL_STRONG=...
+AGENT_MODEL_CHEAP=...</code></pre></div>
+      <div class="card"><h3>Any CLI</h3><p>Prompt on stdin, answer on stdout</p><pre><code>AGENT_PROVIDER=cmd
+AGENT_CMD="claude -p"
+# or "codex exec -"
+# or "ollama run llama3.1"</code></pre></div>
+    </div>
+    <p style="margin-top:16px;color:var(--muted)">Stages ask for a <code>cheap</code> or <code>strong</code> tier. Put them in <code>.env</code>; <code>mise run doctor</code> checks the endpoint and that the model is served.</p>
+  </div>
+</section>
+
+<!-- ============ QUICK START ============ -->
+<section id="quick">
+  <div class="wrap">
+    <span class="kicker">Quick start</span>
+    <h2>Five minutes to a first stage.</h2>
+    <div class="cols c2">
+      <div>
+        <div class="cmd"><code>mise trust &amp;&amp; cp .env.example .env</code><button class="copy" type="button" data-copy>Copy</button></div>
+        <p style="color:var(--muted);margin:6px 0 16px">Set <code>AGENT_MODEL</code> in <code>.env</code>.</p>
+        <div class="cmd"><code>mise run doctor</code><button class="copy" type="button" data-copy>Copy</button></div>
+        <p style="color:var(--muted);margin:6px 0 16px">Python, git, endpoint, model served.</p>
+        <div class="cmd"><code>mise run new "Export invoices as CSV"</code><button class="copy" type="button" data-copy>Copy</button></div>
+        <p style="color:var(--muted);margin:6px 0 16px">Creates <code>US-002</code> as a raw draft.</p>
+        <div class="cmd"><code>mise run branch US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+        <p style="color:var(--muted);margin:6px 0 16px">Off <code>main</code> before any commit.</p>
+      </div>
+      <div>
+        <div class="cmd"><code>mise run story US-002 --dry</code><button class="copy" type="button" data-copy>Copy</button></div>
+        <p style="color:var(--muted);margin:6px 0 16px">Print the exact prompt. No model call.</p>
+        <div class="cmd"><code>mise run story US-002 --plan</code><button class="copy" type="button" data-copy>Copy</button></div>
+        <p style="color:var(--muted);margin:6px 0 16px">Call the model, show files, write nothing.</p>
+        <div class="cmd"><code>mise run story US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+        <p style="color:var(--muted);margin:6px 0 16px">Write files and run checks. Then review the diff.</p>
+        <div class="cmd"><code>mise run check</code><button class="copy" type="button" data-copy>Copy</button></div>
+        <p style="color:var(--muted);margin:6px 0 0">Validate, trace, unit tests.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DOCS ============ -->
+<section class="soft" id="docs">
+  <div class="wrap">
+    <span class="kicker">Documentation</span>
+    <h2>Read more.</h2>
+    <div class="cols c4">
+      <a class="card" href="docs/workflow.html" style="text-decoration:none;color:inherit"><h3>Workflow</h3><p>Who does what, when. Stage cards, RACI, definition of done.</p></a>
+      <a class="card" href="docs/guide.html" style="text-decoration:none;color:inherit"><h3>Guide</h3><p>Setup, providers, a walkthrough, troubleshooting.</p></a>
+      <a class="card" href="docs/architecture.html" style="text-decoration:none;color:inherit"><h3>Architecture</h3><p>Layers, prompt assembly, file protocol, safety model.</p></a>
+      <a class="card" href="docs/reference.html" style="text-decoration:none;color:inherit"><h3>Reference</h3><p>Tasks, env vars, schemas, exit codes, pipeline fields.</p></a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>AgenticDev &middot; a vendor-neutral agentic SDLC template</span>
+    <span><a href="https://github.com/bhoudebert/template-agent-dev">Source</a> &middot; <a href="docs/workflow.html">Docs</a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  function copy(text, btn) {
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        var old = btn.textContent; btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = old; }, 1400);
+      });
+    } catch (e) {}
+  }
+  document.querySelectorAll("[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var code = b.parentElement.querySelector("code");
+      if (code) copy(code.textContent, b);
+    });
+  });
+  document.querySelectorAll("[data-copy-id]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var el = document.getElementById(b.getAttribute("data-copy-id"));
+      if (el) copy(el.textContent, b);
+    });
+  });
+
+  // Stage explorer: progressive enhancement. Without JS every stage stays visible.
+  var tabs = document.getElementById("tabs");
+  var stages = Array.prototype.slice.call(document.querySelectorAll("article.stage"));
+  if (!tabs || !stages.length) return;
+  var buttons = [];
+  function select(i, focus) {
+    stages.forEach(function (s, j) {
+      var on = i === j;
+      s.classList.toggle("on", on);
+      s.setAttribute("aria-hidden", on ? "false" : "true");
+      buttons[j].setAttribute("aria-selected", on ? "true" : "false");
+      buttons[j].tabIndex = on ? 0 : -1;
+    });
+    if (focus) buttons[i].focus();
+    try { history.replaceState(null, "", "#" + stages[i].id); } catch (e) {}
+  }
+  stages.forEach(function (s, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.setAttribute("role", "tab");
+    b.id = "t-" + s.id; b.setAttribute("aria-controls", s.id);
+    b.innerHTML = '<span class="n">' + (i + 1) + "</span>" + s.getAttribute("data-label");
+    s.setAttribute("role", "tabpanel"); s.setAttribute("aria-labelledby", b.id);
+    b.addEventListener("click", function () { select(i, false); });
+    b.addEventListener("keydown", function (e) {
+      var n = stages.length;
+      if (e.key === "ArrowRight") { e.preventDefault(); select((i + 1) % n, true); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); select((i - 1 + n) % n, true); }
+      if (e.key === "Home") { e.preventDefault(); select(0, true); }
+      if (e.key === "End") { e.preventDefault(); select(n - 1, true); }
+    });
+    tabs.appendChild(b); buttons.push(b);
+  });
+  var start = 0;
+  stages.forEach(function (s, i) { if ("#" + s.id === location.hash) start = i; });
+  select(start, false);
+  window.addEventListener("hashchange", function () {
+    stages.forEach(function (s, i) { if ("#" + s.id === location.hash) select(i, false); });
+  });
+})();
+</script>
+</body>
+</html>

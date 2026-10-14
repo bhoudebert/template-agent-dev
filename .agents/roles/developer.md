@@ -8,6 +8,7 @@ Rules
 - No unrelated refactors, no new dependencies without an ADR.
 - Check off finished tasks in tasks.md; leave blocked ones with a note.
 - Never put secrets, tokens or real data in code or tests.
+- Commit as Conventional Commits with the story id as scope, on the story's `feature/<US-id>-<slug>` branch.
 
 Done when: build and tests pass locally (state what you ran), tasks.md updated.
 Must not: change the spec to fit the code; if spec is wrong, stop and report.
