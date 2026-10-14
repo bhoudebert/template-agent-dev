@@ -435,10 +435,11 @@ git add -A && git commit -m "test(US-001): 2048 boundary; qa report corrected" &
 ### 8.1 Second pair of eyes **[AGENT]**
 
 ```sh
-AGENT_BASE_REF=main mise run review US-001      # writes .agents/out/review-US-001.md
+mise run review            # diff of this branch vs main (+ uncommitted changes), printed
+mise run review --post     # same, and comment it on the open PR
 ```
 
-In CI the same stage runs on every PR and posts one comment. Its quality is uneven: across two runs it once flagged the unbounded request body and once did not. Treat it as extra input, never as the review.
+The review is also written to `.agents/out/review-<id>.md`. In CI the same stage runs on every PR and posts one comment, once a model is configured there. Its quality is uneven: across two runs it once flagged the unbounded request body and once did not. Treat it as extra input, never as the review.
 
 ### 8.2 Your review **[YOU]**
 
