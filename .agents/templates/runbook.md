@@ -1,5 +1,5 @@
 ---
-id: RB-000
+id: RB-000   # RB-NNN only, no slug; the slug goes in the file name RB-NNN-<slug>.md
 type: runbook
 title: Runbook title
 date: 2026-01-01
