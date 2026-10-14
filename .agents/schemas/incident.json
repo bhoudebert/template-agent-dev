@@ -21,7 +21,7 @@
       ]
     },
     "patterns": {
-      "id": "^INC-\\d{3,}$"
+      "id": "^{incident}$"
     }
   },
   "sections": [

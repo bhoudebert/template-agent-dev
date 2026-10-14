@@ -45,12 +45,13 @@ jobs:
           BODY: ${{ github.event.issue.body }}
           NUM: ${{ github.event.issue.number }}
         run: |
-          id=$(printf 'US-%03d' "$NUM")
-          mkdir -p docs/stories
+          id=$(python3 tools/config.py format story "$NUM")
+          dir=$(python3 tools/config.py path stories)
+          mkdir -p "$dir"
           {
             printf -- '---\nid: %s\ntype: story\ntitle: %s\nstatus: draft\nowner: product-owner\n---\n\n## Story\n' "$id" "$(echo "$TITLE" | tr -d ':#\n')"
             printf '%s\n' "$BODY"
-          } > "docs/stories/$id.md"
+          } > "$dir/$id.md"
           echo "ID=$id" >> "$GITHUB_ENV"
       - name: Enrich
         if: steps.cfg.outputs.skip != 'true'
@@ -68,7 +69,7 @@ jobs:
           git config user.name "$ACTOR"
           git config user.email "${ACTOR_ID}+${ACTOR}@users.noreply.github.com"
           git checkout -b "feature/${ID}-from-issue-${NUM}"
-          git add docs/stories
+          git add "$(python3 tools/config.py path stories)"
           git commit -m "docs(${ID}): enrich story from issue #${NUM}"
           git push -u origin HEAD
           gh pr create --base main --title "docs(${ID}): enrich story from issue #${NUM}" \

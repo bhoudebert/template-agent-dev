@@ -10,6 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import config
 import miniyaml
 import trace_check
 import validate
@@ -29,7 +30,7 @@ def current_branch(root):
 
 
 def load_story(root, sid):
-    p = Path(root) / "docs" / "stories" / f"{sid}.md"
+    p = Path(root) / config.load(root).path("stories") / f"{sid}.md"
     if not p.exists():
         return None
     meta, _ = miniyaml.split_frontmatter(p.read_text(encoding="utf-8"))
@@ -63,7 +64,7 @@ def main(argv):
     sid = args[0] if args else None
     branch = current_branch(ROOT)
     if not sid:
-        m = re.search(r"(US|INC)-\d+", branch)
+        m = re.search(config.load(ROOT).regex("any"), branch)
         sid = m.group(0) if m else None
 
     if not only_next:
@@ -77,12 +78,12 @@ def main(argv):
     if sid is None:
         print("story:  none inferred from the branch; pass an id, or `mise run new <title>`")
         return 0
-    if sid.startswith("INC-"):
+    if config.load(ROOT).is_kind("incident", sid):
         print(f"incident: {sid}. next: agent `mise run diagnose {sid}`; a human executes any mitigation")
         return 0
     meta = load_story(ROOT, sid)
     if meta is None:
-        print(f"story:  {sid} not found in docs/stories/")
+        print(f"story:  {sid} not found in {config.load(ROOT).path('stories')}/")
         return 1
     skip = meta.get("skip") or []
     print(f"story:  {sid}  status={meta.get('status')}  title={meta.get('title')!r}"

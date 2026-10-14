@@ -45,8 +45,9 @@ usage = '''
 arg "<title>" var=#true help="Story title (no quotes needed)"
 flag "--text <text>" help="the request in your own words; otherwise edit the file afterwards"
 flag "--bug" help="a bug: symptom, expected behaviour, reproduction (same US ladder, bug-shaped story)"
+flag "--id <key>" help="adopt this id (e.g. a Jira key PROJ-4821) instead of the next number"
 '''
-run = 'python3 tools/items.py new-story ${usage_title} ${usage_text:+--text "$usage_text"} $([ "${usage_bug}" = "true" ] && echo --bug)'
+run = 'python3 tools/items.py new-story ${usage_title} ${usage_text:+--text "$usage_text"} ${usage_id:+--id "$usage_id"} $([ "${usage_bug}" = "true" ] && echo --bug)'
 
 [tasks.incident]
 description = "Create an incident file from template:  mise run incident Checkout 500s"

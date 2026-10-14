@@ -14,7 +14,7 @@
       ]
     },
     "patterns": {
-      "story": "^US-\\d{3,}$"
+      "story": "^{story}$"
     }
   },
   "sections": [

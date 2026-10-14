@@ -47,7 +47,7 @@ else
   # title = latest commit subject (--fill alone would use the branch name when there are several commits).
   # body = commit subjects + Refs derived from the branch and commit messages; `Refs: none` is valid.
   refs=$(printf '%s\n%s\n' "$branch" "$(git log "$base..HEAD" --format=%B)" \
-    | grep -oE '(US|INC)-[0-9]+|ADR-[0-9]{4}' | sort -u | paste -sd, - | sed 's/,/, /g')
+    | grep -oE "$(python3 tools/config.py regex any)" | sort -u | paste -sd, - | sed 's/,/, /g')
   body=$(printf '## What and why\n\n%s\n\n## Refs\n\nRefs: %s\n' \
     "$(git log "$base..HEAD" --reverse --format='- %s')" "${refs:-none}")
   if [ "$emergency" = "true" ]; then

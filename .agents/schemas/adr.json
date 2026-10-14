@@ -17,8 +17,8 @@
       ]
     },
     "patterns": {
-      "id": "^ADR-\\d{4}$",
-      "story": "^US-\\d{3,}$"
+      "id": "^{adr}$",
+      "story": "^{story}$"
     }
   },
   "sections": [

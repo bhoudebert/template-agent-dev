@@ -23,7 +23,7 @@
       ]
     },
     "patterns": {
-      "id": "^US-\\d{3,}$"
+      "id": "^{story}$"
     }
   },
   "sections": [

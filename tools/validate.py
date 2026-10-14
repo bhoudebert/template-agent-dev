@@ -12,6 +12,7 @@ import re
 import sys
 from pathlib import Path
 
+import config
 import miniyaml
 import repowalk
 
@@ -37,7 +38,8 @@ def _sections(body):
 def check_file(path, root=ROOT):
     path = Path(path)
     rel = os.path.relpath(path, root)
-    if Path(rel).parts[:1] == ("openspec",):
+    cfg = config.load(root)
+    if any(rel == p or rel.startswith(p + "/") for p in (cfg.path("specs"), cfg.path("changes"))):
         return []  # OpenSpec files are checked by check_change(), not by artifact schema
     try:
         meta, body = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
@@ -59,7 +61,7 @@ def check_file(path, root=ROOT):
         if key in meta and meta[key] not in allowed:
             errs.append(f"{rel}: `{key}`={meta[key]!r} not in {allowed}")
     for key, pattern in fm.get("patterns", {}).items():
-        if key in meta and not re.match(pattern, str(meta[key])):
+        if key in meta and not re.match(cfg.substitute(pattern), str(meta[key])):
             errs.append(f"{rel}: `{key}`={meta[key]!r} does not match {pattern}")
     fname_key = schema.get("filename_starts_with")
     if fname_key and meta.get(fname_key):
@@ -138,7 +140,7 @@ def scan(root=ROOT):
     errs = []
     for path in repowalk.iter_markdown(root):
         errs += check_file(path, root)
-    changes = Path(root) / "openspec" / "changes"
+    changes = Path(root) / config.load(root).path("changes")
     if changes.is_dir():
         for d in sorted(changes.iterdir()):
             if d.is_dir() and d.name != "archive":

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Evidence floor: a story that reaches `implemented` must leave something anchoring its behaviour.
 
-    python tools/evidence.py [--base REF] [--story US-001]
+    python tools/evidence.py [--base REF] [--story ID | --branch NAME]
 
 A story's change must include at least ONE of:
   - a changed OpenSpec file (a spec added or updated), or
@@ -18,11 +18,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+import config
 import miniyaml
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_TESTS = ["tests/*", "*/tests/*", "*__tests__*", "*.test.*", "*.spec.*", "*_test.*", "test_*", "*/test_*"]
-DEFAULT_SPECS = ["openspec/specs/*", "openspec/changes/*"]
+
 ENFORCED_FROM = ("implemented", "done")
 
 
@@ -35,7 +36,8 @@ def globs(root):
         cfg = miniyaml.loads((Path(root) / ".agents" / "pipeline.yaml").read_text(encoding="utf-8")).get("evidence") or {}
     except (OSError, ValueError):
         cfg = {}
-    return cfg.get("tests") or DEFAULT_TESTS, cfg.get("specs") or DEFAULT_SPECS
+    c = config.load(root)
+    return cfg.get("tests") or DEFAULT_TESTS, cfg.get("specs") or [f"{c.path('specs')}/*", f"{c.path('changes')}/*"]
 
 
 def base_ref(root):
@@ -60,17 +62,19 @@ def changed_files(root, base):
     return sorted(files)
 
 
-def story_id(root, explicit=None):
+def story_id(root, explicit=None, branch=None):
     if explicit:
         return explicit
-    p = _git(root, "branch", "--show-current")
-    m = re.search(r"US-\d+", p.stdout if p.returncode == 0 else "")
+    if branch is None:
+        p = _git(root, "branch", "--show-current")
+        branch = p.stdout if p.returncode == 0 else ""
+    m = re.search(config.load(root).core("story"), branch)
     return m.group(0) if m else None
 
 
 def evaluate(root, sid, files):
     """Return (ok, lines)."""
-    path = Path(root) / "docs" / "stories" / f"{sid}.md"
+    path = Path(root) / config.load(root).path("stories") / f"{sid}.md"
     if not path.exists():
         return True, [f"evidence: {sid} has no story file; nothing to enforce"]
     meta, _ = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
@@ -102,15 +106,18 @@ def evaluate(root, sid, files):
 def main(argv):
     base = None
     story = None
+    branch = None
     it = iter(argv)
     for a in it:
         if a == "--base":
             base = next(it, None)
         elif a == "--story":
             story = next(it, None)
+        elif a == "--branch":
+            branch = next(it, None)
     if base:
         os.environ["AGENT_BASE_REF"] = base
-    sid = story_id(ROOT, story)
+    sid = story_id(ROOT, story, branch)
     if not sid:
         print("evidence: no story id in the branch name (use --story); nothing to enforce")
         return 0

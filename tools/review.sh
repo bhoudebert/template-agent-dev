@@ -18,7 +18,7 @@ if [ "$commit_mode" = "true" ] && [ "$post" = "true" ]; then
 fi
 
 if [ -z "$id" ]; then
-  id=$(printf '%s' "$branch" | grep -oE '(US|INC)-[0-9]+' | head -1 || true)
+  id=$(printf '%s' "$branch" | grep -oE "$(python3 tools/config.py regex any)" | head -1 || true)
 fi
 pr_number=""; pr_base=""
 if command -v gh >/dev/null 2>&1; then
