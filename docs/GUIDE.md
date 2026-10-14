@@ -84,7 +84,7 @@ Pick one, export in your shell (or a `.env` you source; `.env` is git-ignored).
 ```sh
 export AGENT_PROVIDER=openai
 export AGENT_BASE_URL=http://localhost:11434/v1
-export AGENT_MODEL=llama3.1            # or AGENT_MODEL_STRONG / AGENT_MODEL_CHEAP
+export AGENT_MODEL=gemma4:12b           # or AGENT_MODEL_STRONG / AGENT_MODEL_CHEAP
 ```
 
 **B. Hosted OpenAI-compatible API:**
@@ -98,7 +98,7 @@ export AGENT_MODEL_STRONG=<big model>  AGENT_MODEL_CHEAP=<small model>
 **C. Any CLI agent (prompt on stdin, answer on stdout):**
 ```sh
 export AGENT_PROVIDER=cmd
-export AGENT_CMD="claude -p"           # or "codex exec -", "ollama run llama3.1"
+export AGENT_CMD="claude -p"           # or "codex exec -", "ollama run gemma4:12b"
 ```
 
 Stages declare `model: cheap|strong` in `pipeline.yaml`; tiers map to `AGENT_MODEL_CHEAP` / `AGENT_MODEL_STRONG`, falling back to `AGENT_MODEL`.

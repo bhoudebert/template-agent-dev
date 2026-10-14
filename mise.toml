@@ -6,7 +6,7 @@ min_version = "2024.11.0"
 # Defaults = local Ollama. Override in .env (git-ignored; see .env.example).
 AGENT_PROVIDER = "openai"
 AGENT_BASE_URL = "http://localhost:11434/v1"
-AGENT_MODEL = "llama3.1"
+AGENT_MODEL = "gemma4:12b"
 _.file = { path = ".env" }
 
 # ---------- dev ----------
