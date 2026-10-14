@@ -135,6 +135,31 @@ run = 'python3 tools/items.py skip "${usage_id}" "${usage_stages}" --reason "${u
 description = "Does this branch leave evidence (a spec or test change) for its story?"
 run = "python3 tools/evidence.py"
 
+[tasks."kit:install"]
+description = "Install this kit into another repo:  mise run kit:install ../my-repo [--with ci,docs,release] [--plan]"
+usage = '''
+arg "<target>" help="path of the repository to install into"
+flag "--with <features>" help="optional features: ci, docs, release (core is always installed)"
+flag "--plan" help="show what would change, write nothing"
+'''
+run = 'python3 tools/agentkit.py install --target "${usage_target}" ${usage_with:+--with "$usage_with"} $([ "${usage_plan}" = "true" ] && echo --plan)'
+
+[tasks."kit:status"]
+description = "Kit status in this repo: what is clean, what you edited, what the kit changed"
+run = "python3 tools/agentkit.py status"
+
+[tasks."kit:update"]
+description = "Update the kit here on a new branch:  mise run kit:update [tools|agents|docs|ci|all] [--plan]"
+usage = '''
+arg "[scope]" var=#true help="tools, agents, docs, ci or all (default: tools agents docs; ci only when asked)"
+flag "--plan" help="show what would change, write nothing"
+'''
+run = 'python3 tools/agentkit.py update ${usage_scope} $([ "${usage_plan}" = "true" ] && echo --plan)'
+
+[tasks."kit:check"]
+description = "Fail if kit files in this repo still contain unresolved merge conflict markers"
+run = "python3 tools/agentkit.py check"
+
 [tasks.status]
 description = "List stories, their status and the next stage"
 run = "python3 tools/items.py list"
