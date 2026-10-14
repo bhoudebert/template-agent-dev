@@ -1,9 +1,16 @@
-# Builds agentkit.pyz (engine + the exact kit payload) and attaches it to the GitHub release.
+# Builds `agentkit` (engine + the exact kit payload) and attaches it, with a checksum, to a GitHub release.
 # This is the kit's own workflow; it is not installed into adopting repositories.
+#
+# Why it is called from release-please.yml and not only on `release: published`: a release created with the
+# default token does not trigger other workflows, so a published-event workflow never ran for it.
+# Run by hand to (re)attach: gh workflow run release-pyz.yml -f tag=v0.1.0
 name: release-pyz
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       tag:
@@ -15,20 +22,32 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      TAG: ${{ inputs.tag }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          ref: ${{ inputs.tag }}
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - name: Build
-        run: python tools/build_pyz.py --version "${TAG#v}" --out dist/agentkit.pyz
+        run: python tools/build_pyz.py --version "${TAG#v}" --out dist/agentkit
       - name: Smoke test
         run: |
-          python dist/agentkit.pyz --help
+          python dist/agentkit --help
           tmp=$(mktemp -d) && cd "$tmp" && git init -q && git config user.name ci && git config user.email ci@example.com \
-            && git commit -q --allow-empty -m init && python "$GITHUB_WORKSPACE/dist/agentkit.pyz" install --plan | head -5
+            && git commit -q --allow-empty -m init && python "$GITHUB_WORKSPACE/dist/agentkit" install --plan | head -5
+      - name: Package per platform
+        # The file is pure Python, so the same bytes serve every platform. It is published under the
+        # platform names mise (and curl | tar) look for; an extension-less or platform-less asset is
+        # not detected by mise. No raw `agentkit` asset and no per-archive .sha256: both stop mise
+        # resolving the release.
+        run: |
+          cd dist
+          chmod +x agentkit
+          for t in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-apple-darwin aarch64-apple-darwin; do
+            tar -czf "agentkit-$t.tar.gz" agentkit
+          done
+          sha256sum agentkit-*.tar.gz > agentkit.sha256
       - name: Attach to the release
-        run: gh release upload "$TAG" dist/agentkit.pyz dist/agentkit.pyz.sha256 --clobber
+        run: gh release upload "$TAG" dist/agentkit-*.tar.gz dist/agentkit.sha256 --clobber
