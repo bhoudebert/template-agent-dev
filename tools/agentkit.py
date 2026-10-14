@@ -326,6 +326,53 @@ def new_branch(target, name):
     return cur, final
 
 
+def _has_remote(target):
+    p = run(["git", "remote"], cwd=target.root, check=False)
+    return bool(p.stdout.strip())
+
+
+def confirm(args, what):
+    """Ask before writing, on a terminal. --yes (or no terminal) proceeds."""
+    if getattr(args, "yes", False) or not sys.stdin.isatty():
+        return
+    if input(f"{what}Continue? [y/N] ").strip().lower() not in ("y", "yes"):
+        raise SystemExit("aborted; nothing was written")
+
+
+def announce(args, branch, kind):
+    """Say, before writing, exactly what is about to happen to the repository."""
+    where = f"a new branch `{branch}`" if branch else "the current branch"
+    commit_txt = "leaves the changes uncommitted" if args.no_commit else "makes one commit"
+    print(f"\nThis {kind} {commit_txt} on {where}. Nothing is pushed; `main` is not touched.")
+
+
+def next_steps(target, base, branch, args, after=()):
+    """Numbered follow-up: what to do with the branch just created."""
+    lines = []
+    if args.no_commit:
+        lines.append("review: `git diff`, then commit when happy")
+    else:
+        lines.append("review what changed: `git show --stat HEAD`")
+    if branch:
+        if _has_remote(target):
+            lines.append(f"publish: `git push -u origin {branch}`, then open a PR and merge it "
+                         "(`gh pr create --fill`, or `mise trust && mise run ship`)")
+            lines.append(f"after the merge: `git switch {base or 'main'} && git pull`")
+        else:
+            lines.append(f"no git remote yet: add one (`git remote add origin <url>`), then `git push -u origin {branch}`")
+    lines.extend(after)
+    print("\nnext steps:")
+    for n, text in enumerate(lines, 1):
+        print(f"  {n}. {text}")
+
+
+def installed_version(target):
+    try:
+        return json.loads(target.path(LOCK).read_text(encoding="utf-8"))["version"]
+    except (OSError, ValueError, KeyError):
+        return None
+
+
 def commit(target, paths, message):
     run(["git", "add", "-A", "--", *paths], cwd=target.root)
     p = run(["git", "-c", "commit.gpgsign=false", "commit", "-q", "-m", message], cwd=target.root, check=False)
@@ -363,13 +410,19 @@ def cmd_install(args):
                 return 1
             raise SystemExit(1)
         if args.plan:
+            print("\nplan only: nothing was written. Run `agentkit install` (add `--yes` to skip the prompt) to apply.")
             return 0
         dirty = target.dirty_tracked()
         if dirty and not args.no_branch:
             raise SystemExit("working tree has uncommitted changes to tracked files; commit or stash first")
-        branch = None
+        branch, base = None, None
         if not args.no_branch:
-            _, branch = new_branch(target, "chore/agentkit-install")
+            announce(args, "chore/agentkit-install", "install")
+            confirm(args, "")
+            base, branch = new_branch(target, "chore/agentkit-install")
+        else:
+            announce(args, None, "install")
+            confirm(args, "")
         files = {}
         touched = [LOCK]
         for dst, act, e in actions:
@@ -396,10 +449,13 @@ def cmd_install(args):
         if not args.no_commit:
             commit(target, touched, f"chore(agentkit): install {kit.version()}")
         kept = [d for d, a, _ in actions if a == "collision-kept"]
-        print(f"\ninstalled on branch {branch or '(current)'}; review the diff, then `mise run ship` or open a PR.")
+        print(f"\ninstalled on branch {branch or '(current)'}.")
         if kept:
             print("kept YOUR version (collision, not managed by the kit):\n  " + "\n  ".join(kept))
-        print("next: fill in CONTEXT.md (stack, test command), then `mise run doctor`.")
+        next_steps(target, base, branch, args, after=[
+            "then, on the base branch: `mise trust; mise run hooks`",
+            "fill in CONTEXT.md (stack, test command)",
+            "`agentkit todo` lists what is left; `mise run doctor` checks the setup"])
         return 0
     finally:
         cleanup()
@@ -432,6 +488,21 @@ def classify(target, lock, entries):
         if dst not in lock["files"] and e["class"] != "seed":
             rows.append((dst, e["class"], "new"))
     return rows
+
+
+def cmd_version(args):
+    """The release version of this kit; in a repo copy, the version recorded at install."""
+    root = running_kit_root()
+    if (root / "VERSION").exists() or (root / "kit.json").exists():
+        v = Kit(root).version()
+        print(f"agentkit {v}")
+        return 0
+    try:
+        rec = installed_version(Target(args.target))
+    except SystemExit:
+        rec = None
+    print(f"agentkit {rec or 'unknown'} (installed copy)")
+    return 0
 
 
 def cmd_status(args):
@@ -521,14 +592,19 @@ def cmd_update(args):
         if not shown:
             print("  nothing to do")
         if args.plan or not shown:
+            if args.plan and shown:
+                print("\nplan only: nothing was written.")
             return 0
         real = [a for a in shown if a[1] not in ("ignored", "new-seed-available", "collision-kept",
                                                  "deleted-locally-kept", "removed-upstream-kept", "needs-manual-merge")]
         if target.dirty_tracked() and not args.no_branch:
             raise SystemExit("working tree has uncommitted changes to tracked files; commit or stash first")
-        branch = None
+        branch = start = None
         if not args.no_branch:
-            _, branch = new_branch(target, f"chore/agentkit-update-{kit.version().replace('+', '-')}")
+            name = f"chore/agentkit-update-{kit.version().replace('+', '-')}"
+            announce(args, name, "update")
+            confirm(args, "")
+            start, branch = new_branch(target, name)
         touched = [LOCK, CHANGES]
         conflicts = []
         for dst, act, e, merged in real:
@@ -565,9 +641,11 @@ def cmd_update(args):
                 touched.append("docs/INDEX.md")
         if not args.no_commit:
             commit(target, touched, f"chore(agentkit): update to {kit.version()}")
-        print(f"\nupdated on branch {branch or '(current)'}; review the diff, then `mise run ship`.")
+        print(f"\nupdated on branch {branch or '(current)'}.")
         if conflicts:
             print("CONFLICTS to resolve before merging:\n  " + "\n  ".join(conflicts))
+        next_steps(target, start if branch else None, branch, args,
+                   after=["resolve conflicts first (`agentkit reconcile`)"] if conflicts else [])
         return 0
     finally:
         cleanup()
@@ -725,12 +803,15 @@ def cmd_uninstall(args):
         print(f"  {act:<14} {dst}")
     print("  (seeds you own, such as CONTEXT.md and the docs folders, are never removed)")
     if args.plan:
+        print("\nplan only: nothing was written.")
         return 0
     if target.dirty_tracked() and not args.no_branch:
         raise SystemExit("working tree has uncommitted changes to tracked files; commit or stash first")
-    branch = None
+    branch = start = None
     if not args.no_branch:
-        _, branch = new_branch(target, "chore/agentkit-uninstall")
+        announce(args, "chore/agentkit-uninstall", "uninstall")
+        confirm(args, "")
+        start, branch = new_branch(target, "chore/agentkit-uninstall")
     touched = [".agentkit"]
     for dst, act in plan:
         p = target.path(dst)
@@ -757,10 +838,11 @@ def cmd_uninstall(args):
     shutil.rmtree(target.path(".agentkit"), ignore_errors=True)
     if not args.no_commit:
         commit(target, touched, f"chore(agentkit): uninstall {lock['version']}")
-    print(f"\nuninstalled on branch {branch or '(current)'}; review the diff.")
+    print(f"\nuninstalled on branch {branch or '(current)'}.")
     kept = [d for d, a in plan if a == "kept-edited"]
     if kept:
         print("kept because you edited them (use --force to remove):\n  " + "\n  ".join(kept))
+    next_steps(target, start if branch else None, branch, args)
     return 0
 
 
@@ -875,7 +957,11 @@ def cmd_check(args):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    sub = ap.add_subparsers(dest="cmd", required=True)
+    ap.add_argument("--version", "-v", action="store_true", help="print the kit version")
+    sub = ap.add_subparsers(dest="cmd")
+    vp = sub.add_parser("version", help="print the kit version")
+    vp.add_argument("--target", default=".")
+    vp.set_defaults(fn=cmd_version)
 
     def common(p):
         p.add_argument("--target", default=".", help="the repository to install into (default: current)")
@@ -884,6 +970,7 @@ def main(argv=None):
         p.add_argument("--plan", action="store_true", help="show what would change, write nothing")
         p.add_argument("--no-branch", action="store_true", help="work on the current branch")
         p.add_argument("--no-commit", action="store_true", help="leave the changes uncommitted")
+        p.add_argument("--yes", "-y", action="store_true", help="do not ask for confirmation")
 
     i = sub.add_parser("install")
     common(i)
@@ -912,6 +999,7 @@ def main(argv=None):
     x.add_argument("--force", action="store_true", help="also remove files you edited")
     x.add_argument("--no-branch", action="store_true")
     x.add_argument("--no-commit", action="store_true")
+    x.add_argument("--yes", "-y", action="store_true", help="do not ask for confirmation")
     x.set_defaults(fn=cmd_uninstall)
     td = sub.add_parser("todo", help="what is left to do in this repository, in order")
     td.add_argument("--target", default=".")
@@ -922,6 +1010,11 @@ def main(argv=None):
     c.add_argument("--target", default=".")
     c.set_defaults(fn=cmd_check)
     args = ap.parse_args(argv)
+    if args.version:
+        args.target = "."
+        return cmd_version(args)
+    if not args.cmd:
+        ap.error("a command is required (install, status, update, reconcile, uninstall, todo, check, version)")
     return args.fn(args)
 
 

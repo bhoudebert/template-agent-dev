@@ -142,19 +142,25 @@ agentkit install                       # core
 agentkit install --with pointers,ci    # core + assistant entry files + GitHub workflows
 ```
 
-You end up on a branch `chore/agentkit-install` with a single commit:
+Before writing, it says what it is about to do (a new branch, one commit, nothing pushed) and, on a
+terminal, asks to continue. `--yes` skips the question; `--plan` writes nothing. When done it prints the
+steps that follow:
 
 ```
-installed on branch chore/agentkit-install; review the diff, then `mise run ship` or open a PR.
+installed on branch chore/agentkit-install.
+
+next steps:
+  1. review what changed: `git show --stat HEAD`
+  2. publish: `git push -u origin chore/agentkit-install`, then open a PR and merge it
+     (`gh pr create --fill`, or `mise trust && mise run ship`)
+  3. after the merge: `git switch main && git pull`
+  4. then, on the base branch: `mise trust; mise run hooks`
+  5. fill in CONTEXT.md (stack, test command)
+  6. `agentkit todo` lists what is left; `mise run doctor` checks the setup
 ```
 
-Read the diff (`git show --stat`, then the files that matter: `AGENTS.md`, `.gitignore`, anything in the
-collision list). When you are happy, open the PR the normal way, or:
-
-```sh
-mise trust            # lets mise read the new task file
-mise run ship         # checks, push, open the PR; merge it like any other
-```
+Nothing is on `main` until you merge that PR. `update` and `uninstall` work the same way.
+`agentkit --version` (or `agentkit version`) prints the release you have.
 
 ## 4. Make it yours (10 minutes)
 
