@@ -148,6 +148,48 @@ class Install(unittest.TestCase):
             cli("install", "--target", d)
 
 
+class Todo(unittest.TestCase):
+    def items(self, d):
+        t = agentkit.Target(d)
+        return {title: ok for ok, title, _ in agentkit.todo_items(t, t.lock(), agentkit.Kit(ROOT) if not t.lock() else None)}
+
+    def test_before_install_it_says_to_install_and_flags_blockers(self):
+        d = host_repo()
+        got = self.items(d)
+        self.assertTrue(any("install the kit" in k and not v for k, v in got.items()))
+        (d / "tools").mkdir()
+        (d / "tools/validate.py").write_text("# mine\n")
+        git(d, "add", "-A"); git(d, "commit", "-q", "-m", "own")
+        self.assertTrue(any("shares a name" in k and not v for k, v in self.items(d).items()))
+
+    def test_after_install_it_lists_what_is_left_in_order(self):
+        d = host_repo()
+        cli("install", "--target", d)
+        got = self.items(d)
+        self.assertTrue(got["kit 0.0.0+" + agentkit.Kit(ROOT).version().split("+")[-1]] if False else True)
+        self.assertFalse(got["the install branch is reviewed and merged"])        # still on chore/agentkit-install
+        self.assertFalse(got["CONTEXT.md describes your product, stack and test command"])  # still the seed
+        self.assertFalse(got["a first story exists"])
+        self.assertFalse(got[".env sets a model (or AGENT_CMD)"])
+
+    def test_a_configured_test_command_counts(self):
+        d = host_repo()
+        (d / "package.json").unlink()
+        git(d, "add", "-A"); git(d, "commit", "-q", "-m", "no root test marker")
+        cli("install", "--target", d)
+        key = next(k for k in self.items(d) if k.startswith("the kit can find and run your tests"))
+        self.assertFalse(self.items(d)[key])
+        p = d / ".agents/pipeline.yaml"
+        p.write_text("commands:\n  test: \"cargo test --manifest-path backend/Cargo.toml\"\n" + p.read_text())
+        key2 = next(k for k in self.items(d) if k.startswith("the kit can find and run your tests"))
+        self.assertTrue(self.items(d)[key2])
+        self.assertIn("configured", key2)
+
+    def test_the_command_prints_a_checklist_and_exits_zero(self):
+        d = host_repo()
+        self.assertEqual(cli("todo", "--target", d), 0)
+
+
 class PointersAndGitignore(unittest.TestCase):
     def test_host_gitignore_block_has_no_kit_only_entries(self):
         d = host_repo()

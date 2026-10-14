@@ -113,6 +113,18 @@ After `agentkit install`, the repo has `.config/mise/conf.d/agentkit.toml`. Run 
 is yours to add): `mise use "github:bhoudebert/template-agent-dev@0.1.0"` records the version under `[tools]`,
 and `mise install` then gives every teammate the same `agentkit` (subject to the release-age cooldown in step 1).
 
+### "What is left to do?"
+
+Any time, in any repo, before or after installing:
+
+```sh
+agentkit todo            # or, inside an installed repo: mise run kit:todo
+```
+
+It inspects *this* repository and prints an ordered checklist with the command that fixes each open item
+(clean tree, no name collision in `tools/`, install, merged, `mise trust`, hooks, a filled `CONTEXT.md`, a test
+command, a model in `.env`, a first story, assistant entry files). It writes nothing.
+
 ## 2. See what it would do
 
 ```sh
@@ -152,7 +164,47 @@ mise run ship         # checks, push, open the PR; merge it like any other
 | `cp .env.example .env`, set `AGENT_MODEL` | which model runs the stages; `.env` is git-ignored |
 | `mise run hooks` | blocks assistant names in commit messages and any push to `main` |
 | `mise run doctor` | checks python, git, hooks, endpoint, that the model is served |
-| `mise run check` | runs the validators and **your** tests (npm, pytest, go, cargo and mvn are auto-detected) |
+| `mise run check` | runs the validators and **your** tests (npm, pytest, go, cargo and mvn are auto-detected **at the repo root**) |
+
+How `mise run test` finds your tests (first match wins):
+
+| # | Source | For |
+|---|---|---|
+| 1 | **`.agents/tests.yaml`** (yours, the kit never ships or updates it) | declared suites: a name, a folder and a command each |
+| 2 | `commands.test` in `.agents/pipeline.yaml` | one command line: `test: "make check"` |
+| 3 | `.agents/commands/test.sh` | a script **you own** |
+| 4 | the repo root: `Cargo.toml`, `go.mod`, `package.json` with a test script, `pyproject.toml`/`pytest.ini`, `pom.xml` | a single-project repo |
+| 5 | **one folder down**: each sub-folder with one of those markers (so `backend/` and `ui/` are found) | a monorepo, zero config |
+
+The declared form, for when you want control:
+
+```yaml
+# .agents/tests.yaml
+suites:
+  - name: backend
+    dir: backend              # folder, default: the repo root
+    run: cargo test           # the command (required)
+    env: [RUST_LOG=warn]      # optional
+    timeout: 900              # optional, seconds
+  - name: ui
+    dir: ui
+    run: npm test
+  - name: e2e
+    dir: ui
+    run: npx playwright test
+    manual: true              # only when named: mise run test e2e
+    optional: true            # a failure is reported but does not fail the run
+```
+
+```sh
+mise run test              # every suite that is not manual; all run, a failure fails the run and names the suite
+mise run test backend ui   # only these
+mise run test:list         # what would run and why; runs nothing
+mise run test:init         # write .agents/tests.yaml from what was discovered, for you to edit
+```
+
+Do **not** edit `tools/projecttest.sh`: it is kit-managed and an update overwrites it. If nothing is found,
+`mise run test` stops with instructions instead of pretending that nothing failed.
 
 Pick a model (one of):
 

@@ -28,6 +28,7 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `kit:install` | `<target> [--with ci,docs,release] [--plan]` | Install the kit into another repository, on a branch, one commit |
 | `kit:status` | | In an adopting repo: clean / you edited / kit changed / both |
 | `kit:update` | `[tools\|agents\|docs\|ci\|all] [--plan]` | Update the kit on a new branch; `ci` only when asked |
+| `kit:todo` | | What is left to do in this repo, in order (also `agentkit todo`, usable before installing) |
 | `kit:check` | | Fail on unresolved conflict markers in kit files |
 | `kit:reconcile` | `[--brief] [--plan]` | A model (or `--brief`: your assistant) resolves update conflicts |
 | `kit:uninstall` | `[--plan]` | Remove what the kit installed, on a branch |
@@ -35,6 +36,7 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `check` | | `validate` + `trace` + `test` |
 | `test` | | The **project's** tests: auto-detects `npm test`, pytest, `go test`, `cargo test`, `mvn test` (`tools/projecttest.sh`) |
 | `test:tools` | | The template's own tool tests (`tools/tests`) |
+| `test:list` / `test:init` | | Show the suites that would run / write `.agents/tests.yaml` from discovery |
 | `validate` `trace` | | One deterministic check each |
 | `doctor` | | Python, git, endpoint, model served |
 | `env` | | Show `AGENT_*` (keys masked) |
@@ -145,6 +147,13 @@ paths:                              # stories architecture decisions qa incident
 |---|---|
 | `mise run new "..." --id PROJ-4821` | create the story with an existing tracker key instead of the next number (the file is `PROJ-4821.md`) |
 | `python3 tools/config.py regex story` / `path stories` / `format story 12` | what the shell scripts and CI call |
+
+`mise run test`, `check`, `ship` and CI run **your** tests, found in this order: `.agents/tests.yaml` (declared
+suites: `name`, `dir`, `run`, and optional `env`, `timeout`, `manual`, `optional`; yours, never shipped or updated by
+the kit), then `commands.test` in this file, then a script of yours at `.agents/commands/test.sh`, then the
+repository root (Cargo.toml, go.mod, package.json with a test script, pyproject.toml/pytest.ini/setup.cfg,
+pom.xml), then each sub-folder with one of those markers. `mise run test:list` shows the result without running it,
+`mise run test:init` writes `.agents/tests.yaml` from what was discovered.
 
 Changing the prefix does not rename existing files: rename them (and their `id:` / `story:` fields) in the same PR.
 
