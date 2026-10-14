@@ -3,7 +3,9 @@
 openai : any OpenAI-compatible /chat/completions endpoint
          (Ollama, vLLM, llama.cpp server, LM Studio, OpenAI, gateways...)
          env: AGENT_BASE_URL (default http://localhost:11434/v1), AGENT_API_KEY,
-              AGENT_MODEL_STRONG / AGENT_MODEL_CHEAP / AGENT_MODEL
+              AGENT_MODEL_STRONG / AGENT_MODEL_CHEAP / AGENT_MODEL,
+              AGENT_REASONING_EFFORT (none|low|medium|high, sent as reasoning_effort),
+              AGENT_MAX_TOKENS (sent as max_tokens)
 cmd    : pipe the prompt to any CLI on stdin, read the answer from stdout.
          env: AGENT_CMD  e.g. "claude -p", "codex exec -", "ollama run llama3"
 dry    : no call; runner prints the prompt.
@@ -35,6 +37,10 @@ def _openai(system, user, tier):
         "temperature": 0.2,
         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
     }
+    if os.environ.get("AGENT_REASONING_EFFORT"):
+        body["reasoning_effort"] = os.environ["AGENT_REASONING_EFFORT"]
+    if os.environ.get("AGENT_MAX_TOKENS"):
+        body["max_tokens"] = int(os.environ["AGENT_MAX_TOKENS"])
     headers = {"Content-Type": "application/json"}
     if os.environ.get("AGENT_API_KEY"):
         headers["Authorization"] = f"Bearer {os.environ['AGENT_API_KEY']}"
@@ -48,9 +54,17 @@ def _openai(system, user, tier):
     except (urllib.error.URLError, TimeoutError) as e:
         raise ProviderError(f"openai provider failed: {e}") from e
     try:
-        return data["choices"][0]["message"]["content"]
-    except (KeyError, IndexError) as e:
+        choice = data["choices"][0]
+        content = choice["message"].get("content") or ""
+    except (KeyError, IndexError, AttributeError) as e:
         raise ProviderError(f"unexpected response shape: {str(data)[:300]}") from e
+    if not content.strip():
+        reasoning = choice["message"].get("reasoning") or choice["message"].get("reasoning_content") or ""
+        raise ProviderError(
+            f"model returned no text (finish_reason={choice.get('finish_reason')!r}, "
+            f"reasoning chars={len(reasoning)}). A thinking model probably spent its whole budget reasoning: "
+            "set AGENT_REASONING_EFFORT=none (or low), set AGENT_MAX_TOKENS, or use a non-thinking model.")
+    return content
 
 
 def _cmd(system, user, tier):

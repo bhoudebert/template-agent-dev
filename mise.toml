@@ -11,8 +11,12 @@ _.file = { path = ".env" }
 
 # ---------- dev ----------
 [tasks.test]
-description = "Run unit tests of the tools"
-run = "python3 -m unittest discover -s tests"
+description = "Run the PROJECT tests (auto-detects npm, pytest, go, cargo, mvn)"
+run = "sh tools/projecttest.sh"
+
+[tasks."test:tools"]
+description = "Run the template's own tool tests (tools/tests)"
+run = "python3 -m unittest discover -s tools/tests"
 
 [tasks.validate]
 description = "Validate artifacts against schemas"
@@ -55,6 +59,18 @@ usage = '''
 arg "<id>" help="US-002 or INC-001"
 '''
 run = 'python3 tools/items.py branch "${usage_id}"'
+
+[tasks.hooks]
+description = "Enable the repo git hooks (blocks agent names in commit messages)"
+run = "git config core.hooksPath .githooks && echo 'hooks enabled: .githooks'"
+
+[tasks.ship]
+description = "Checks + push branch + open PR (PR mode):  mise run ship [--draft] [--base parent-branch]"
+usage = '''
+flag "--draft" help="open as draft PR"
+flag "--base <branch>" default="main" help="PR base; use the parent branch for stacked PRs"
+'''
+run = 'sh tools/ship.sh "${usage_base}" "${usage_draft}"'
 
 [tasks.status]
 description = "List stories, their status and the next stage"
@@ -131,9 +147,17 @@ flag "--plan" help="call LLM, show files, write nothing"
 '''
 run = 'sh tools/stage.sh qa "${usage_id}" "${usage_dry}" "${usage_plan}"'
 
+[tasks.review]
+description = "Review the WHOLE PR/branch locally:  mise run review [id] [--post] [--commit]"
+usage = '''
+arg "[id]" help="US-NNN / INC-NNN; default: from the branch name"
+flag "--post" help="create/update the single review comment on the branch's open PR"
+flag "--commit" help="review only the last commit (cannot be combined with --post)"
+'''
+run = 'sh tools/review.sh "${usage_id}" "${usage_post}" "${usage_commit}"'
+
 [tasks."agent:review"]
 description = "Review the PR diff (reviewer)"
-alias = "review"
 usage = '''
 arg "<id>" help="Work item id, e.g. US-002"
 flag "--dry" help="print prompt only, no LLM call"

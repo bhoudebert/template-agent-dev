@@ -30,7 +30,7 @@ stages:
     goal: Produce a design note and ADR(s) for the decisions this change forces.
     in: [docs/stories/{id}.md, "openspec/changes/{id}/**/*.md", "docs/decisions/*.md", "docs/architecture/*.md"]
     out: ["docs/architecture/{id}.md", "docs/decisions/ADR-*.md"]
-    template: adr
+    template: [design, adr]
     skills: [write-adr]
     check: [validate, trace]
     gate: human:tech-lead
@@ -82,8 +82,9 @@ stages:
     goal: Write human release notes, predicted SemVer bump and a go/no-go checklist (CHANGELOG and tags are owned by release-please).
     in: [docs/stories/{id}.md, "docs/qa/{id}.md", "@diff"]
     out: ["docs/releases/{id}.md"]
+    template: release-notes
     skills: []
-    check: []
+    check: [validate]
     gate: human:release-manager
     model: cheap
 
@@ -92,7 +93,7 @@ stages:
     goal: Triage a production incident from the supplied evidence; produce a hypothesis-ranked incident report and, if useful, a runbook.
     in: [docs/incidents/{id}.md, "docs/runbooks/*.md"]
     out: ["docs/incidents/{id}.md", "docs/runbooks/*.md"]
-    template: incident
+    template: [incident, runbook]
     skills: [triage-incident]
     check: [validate]
     gate: human:on-call

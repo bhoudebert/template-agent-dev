@@ -1,0 +1,3 @@
+#!/bin/sh
+# Enable once per clone: mise run hooks   (git config core.hooksPath .githooks)
+exec python3 "$(git rev-parse --show-toplevel)/tools/check_attribution.py" "$1"

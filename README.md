@@ -20,7 +20,7 @@ More: [docs/WORKFLOW.md](docs/WORKFLOW.md) (who does what, when), [docs/ARCHITEC
 ## Try it
 
 ```sh
-python -m unittest discover -s tests
+python -m unittest discover -s tools/tests
 python tools/validate.py && python tools/trace_check.py     # worked example US-001 passes
 python tools/agentrun.py list
 python tools/agentrun.py run qa --id US-001 --dry-run       # inspect the exact prompt

@@ -28,6 +28,8 @@ mise run status                         # all stories, status, next stage
 | `agent:test <id>` | test-engineer stage (`test` is the unit-test task) |
 | `agent <stage> <id>` | same, any stage |
 | `branch <id>` | create `feature/<US-id>-<slug>` |
+| `hooks` | enable the commit-msg hook (no agent names in history) |
+| `ship [--draft] [--base b]` | checks + push + open PR; refuses on `main` |
 | `advance <id> <status>` | set story status; refuses skipped steps or broken traceability (`--force` overrides) |
 | `check`, `validate`, `trace`, `test` | deterministic checks |
 | `doctor`, `env`, `stages`, `status` | inspect setup / pipeline / items |
@@ -66,7 +68,7 @@ draft -> enriched -> approved -> specified -> designed -> implemented -> done
 Requires Python 3.10+. No packages to install.
 
 ```sh
-python3 -m unittest discover -s tests      # tools healthy?
+python3 -m unittest discover -s tools/tests      # tooling healthy?
 python3 tools/validate.py                  # artifacts valid?
 python3 tools/trace_check.py               # story <-> spec <-> ADR <-> QA consistent?
 git init && git add -A && git commit -m "init"   # needed for @diff (qa/review/release)
@@ -154,10 +156,15 @@ Implementation is iterative: `run implement` works the next unchecked tasks in `
 
 ### Review a PR
 ```sh
-export AGENT_BASE_REF=origin/main
-python3 tools/agentrun.py run review --id US-002 --apply
-cat .agents/out/review-US-002.md          # post as PR comment manually, or use the GitHub workflow
+mise run review            # the WHOLE PR: all its commits vs its base branch (+ uncommitted), printed
+mise run review --post     # same, and create/update THE review comment on the open PR
+mise run review --commit   # only the last commit (never posted)
 ```
+
+- **Scope**: the base is the PR's real base branch (read via `gh`), so a stacked PR is not reviewed together with its parent. Override with `AGENT_BASE_REF`.
+- **One comment**: `--post` and CI update a single marked comment in place; they never add a second one and never touch your own comments. A failing comment lookup is an error, not a new comment.
+- **Reviewing before you commit**: uncommitted changes to tracked files are included. New untracked files are not until you `git add` them.
+- **It is advice**: it can miss things and can report things that are not there. Verify before acting.
 
 ### Production incident
 ```sh
@@ -181,7 +188,7 @@ Output is a ranked hypothesis list and recommended actions. A human executes any
 ```sh
 adapters/install.sh github tools
 ```
-- Copies workflows to `.github/workflows/`: `ci.yml` (PR title check, validate, trace, tests), `release-please.yml`, `agent-review.yml` (comments on PRs), `agent-triage.yml` (label an issue `agent:enrich` -> PR with enriched story).
+- Copies workflows to `.github/workflows/`: `ci.yml` (PR title check, no assistant names, validate, trace, tool and project tests), `release-please.yml`, `agent-review.yml` (one review comment per PR, updated in place), `agent-triage.yml` (label an issue `agent:enrich` -> PR with enriched story).
 - Configure the model in **Settings > Secrets and variables > Actions**:
 
   | Kind | Name | Example |
@@ -193,9 +200,8 @@ adapters/install.sh github tools
 
 - **Not configured? The agent workflows skip** with a notice (they do not fail). The deterministic `ci` workflow is independent and always runs.
 - A GitHub-hosted runner cannot reach a model on your own machine (`localhost`). Use a hosted OpenAI-compatible API, or register a self-hosted runner on a machine that can reach your model and set `runs-on: self-hosted`.
-- Local models need a self-hosted runner that can reach them.
 - Name PR branches `feature/US-002-...` so the reviewer finds the story id.
-- These workflows are untested against a real repo. Try on a throwaway repo first; the triage workflow feeds issue text into a shell, review before enabling on public repos.
+- The agent workflows read branch names, titles and issue text through `env`, never inline in shell. Still, try them on a throwaway repo first; triage treats issue text as untrusted input.
 
 `tools` also writes `CLAUDE.md`, `.github/copilot-instructions.md`, `.cursor/rules/agents.mdc`; each just points the tool at `AGENTS.md`.
 
@@ -216,7 +222,11 @@ adapters/install.sh github tools
 
 | Symptom | Cause / fix |
 |---|---|
+| `validate`: `file name must be ...` | the file name must start with its `id` (or `story`): rename the file, e.g. `ADR-0003-use-queue.md`, `US-012.md`. Existing projects adopting the template: run `mise run validate` once and rename what it lists |
+| review comment not posted: `cannot list comments` | `gh` is not authenticated or lacks `pull-requests: write`. Nothing is posted on purpose (a failed lookup must not create duplicates) |
+| `agent-review` check shows "skipped" | no model configured for CI; set the repository variables (section 4) |
 | exit 3 `no model set` | export `AGENT_MODEL` (or `_STRONG/_CHEAP`) |
+| exit 3 `model returned no text` | a thinking model spent its whole budget reasoning (minutes, empty answer). Set `AGENT_REASONING_EFFORT=none` (or `low`) and `AGENT_MAX_TOKENS=16000`, or use a non-thinking model |
 | exit 3 `openai provider failed` | wrong `AGENT_BASE_URL`, server down, or timeout (`AGENT_TIMEOUT` seconds) |
 | exit 2 `no files in response` | model ignored the `<<<FILE: path>>> ... <<<END>>>` format; use a stronger model or retry; raw reply printed on stderr |
 | `REJECTED (outside allowed paths)` | model wrote a path not in the stage `out`; expected safety behaviour |

@@ -81,8 +81,10 @@ This is a loop, not a step. See [the developer loop](#the-developer-loop).
 - **After** on `pass`: `mise run advance US-002 done` (needs the QA report with `verdict: pass`).
 
 ### 7. Review (reviewer) and merge
-- **Agent**: runs on the PR in CI (`agent-review`), or locally `mise run review US-002`. One comment, findings ranked blocker/major/minor/nit.
-- **Check**: you are the reviewer; the agent is a second pair of eyes. Fix blockers.
+- **Agent**: runs on the PR in CI (`agent-review`, only when a model is configured there), or locally with `mise run review` (the whole PR against its base branch; `--post` to comment on the PR, `--commit` for just the last commit). One comment, findings ranked blocker/major/minor/nit.
+- **Scope**: the whole PR (every commit against its real base branch), not just the latest push. `--commit` reviews only the last commit and is never posted.
+- **The comment**: one comment per author, updated in place on every run; yours and others' comments are never overwritten.
+- **Check**: you are the reviewer; the agent is a second pair of eyes that is sometimes wrong. Verify each finding, fix what is real.
 - **After**: squash-merge into `main`. The PR title is the commit and must be a Conventional Commit, e.g. `feat(US-002): export invoices as CSV`.
 
 ### 8. Release
@@ -123,6 +125,8 @@ Rules of thumb:
 | Long-lived branch | `main` only, always releasable |
 | Work branch | `feature/<US-id>-<slug>` per story; `fix/<INC-id>-<slug>` for incidents |
 | Commit / PR title | Conventional Commits, scope = work item id: `feat(US-002): ...` |
+| Authorship | History shows the human owner only: no assistant or tool names, no `Co-Authored-By` for an AI, no "Generated with" lines. Hook + CI enforce it |
+| Pushing | Push early, small PRs: `mise run ship` (checks, push, open PR; `--draft`, `--base <parent>` for stacks) |
 | Breaking change | `feat(US-002)!:` or footer `BREAKING CHANGE:` |
 | Version | SemVer by release-please; tags `vX.Y.Z`; nobody edits `CHANGELOG.md` |
 

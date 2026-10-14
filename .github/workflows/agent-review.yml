@@ -16,6 +16,10 @@ on:
 permissions:
   contents: read
   pull-requests: write
+concurrency:
+  # one review per PR at a time; a newer push cancels the stale run (also avoids duplicate comments)
+  group: agent-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 jobs:
   review:
     runs-on: ubuntu-latest
@@ -28,6 +32,8 @@ jobs:
       AGENT_REASONING_EFFORT: ${{ vars.AGENT_REASONING_EFFORT }}
       AGENT_MAX_TOKENS: ${{ vars.AGENT_MAX_TOKENS }}
       AGENT_BASE_REF: origin/${{ github.base_ref }}
+      AGENT_DIFF_SCOPE: whole PR (all commits) vs origin/${{ github.base_ref }}
+      REVIEW_SCOPE: whole PR (all commits) vs origin/${{ github.base_ref }}
     steps:
       - name: Is a model configured?
         id: cfg
@@ -56,7 +62,11 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          id=$(printf '%s %s' "$HEAD_REF" "$PR_TITLE" | grep -oE 'US-[0-9]+' | head -1 || true)
+          ids=$(printf '%s %s' "$HEAD_REF" "$PR_TITLE" | grep -oE 'US-[0-9]+' | sort -u || true)
+          id=$(printf '%s\n' "$ids" | head -1)
+          if [ "$(printf '%s\n' "$ids" | grep -c .)" -gt 1 ]; then
+            echo "::warning title=Several stories in one PR::$(echo $ids | tr '\n' ' ') referenced; reviewing against $id. Convention: one PR per story."
+          fi
           echo "id=${id:-PR-$PR_NUMBER}" >> "$GITHUB_OUTPUT"
       - name: Run reviewer
         if: steps.cfg.outputs.skip != 'true'
@@ -69,4 +79,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ITEM: ${{ steps.sid.outputs.id }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: gh pr comment "$PR_NUMBER" --body-file ".agents/out/review-$ITEM.md"
+        run: sh tools/post_review.sh ".agents/out/review-$ITEM.md" "$PR_NUMBER"
