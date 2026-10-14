@@ -8,6 +8,7 @@ for target in "$@"; do
     github)
       mkdir -p .github/workflows
       cp adapters/github/workflows/*.yml .github/workflows/
+      # release-please needs: config + manifest at repo root (already present)
       ;;
     tools)
       printf '@AGENTS.md\n' > CLAUDE.md                          # Claude Code

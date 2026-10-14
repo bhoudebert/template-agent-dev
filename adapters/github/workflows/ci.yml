@@ -4,6 +4,13 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
+      - name: PR title is a Conventional Commit
+        if: github.event_name == 'pull_request'
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          printf '%s\n' "$TITLE" | grep -Eq '^(feat|fix|docs|test|refactor|perf|build|ci|chore|revert)(\([A-Za-z0-9._-]+\))?!?: .+' \
+            || { echo "PR title must be a Conventional Commit, e.g. feat(US-002): export invoices"; exit 1; }
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }

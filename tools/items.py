@@ -4,6 +4,7 @@
     python tools/items.py new-story "Export invoices as CSV"     # next US-NNN, raw draft
     python tools/items.py new-incident "Checkout 500s"            # next INC-NNN from template
     python tools/items.py list                                    # stories + status + next step
+    python tools/items.py branch US-002                           # git checkout -b feature/US-002-<slug>
     python tools/items.py set-status US-002 approved [--force]    # guarded status bump
 """
 import argparse
@@ -91,12 +92,24 @@ def set_status(sid, new, force=False, root=ROOT):
     return cur, new
 
 
+def branch_name(item_id, root=ROOT):
+    """feature/<US-id>-<slug> from the story title; fix/<INC-id>-<slug> for incidents."""
+    folder, prefix = ("stories", "feature") if item_id.startswith("US-") else ("incidents", "fix")
+    path = Path(root) / "docs" / folder / f"{item_id}.md"
+    if not path.exists():
+        raise SystemExit(f"no such item: {path}")
+    meta, _ = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
+    slug = re.sub(r"[^a-z0-9]+", "-", str(meta.get("title", "")).lower()).strip("-")[:40].strip("-")
+    return f"{prefix}/{item_id}" + (f"-{slug}" if slug else "")
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name in ("new-story", "new-incident"):
         sub.add_parser(name).add_argument("title", nargs="+")
     sub.add_parser("list")
+    sub.add_parser("branch").add_argument("id")
     s = sub.add_parser("set-status")
     s.add_argument("id")
     s.add_argument("status")
@@ -108,6 +121,12 @@ def main(argv=None):
     elif a.cmd == "new-incident":
         iid, path = new_incident(" ".join(a.title))
         print(f"created {os.path.relpath(path, ROOT)}\nnext: paste evidence, then `mise run diagnose {iid}`")
+    elif a.cmd == "branch":
+        import subprocess
+        name = branch_name(a.id)
+        rc = subprocess.run(["git", "checkout", "-b", name], cwd=ROOT).returncode
+        print(name)
+        return rc
     elif a.cmd == "list":
         for sid, status, title, _ in stories():
             print(f"{sid:<8} {status:<12} next: {NEXT_STAGE.get(status, '-'):<22} {title}")

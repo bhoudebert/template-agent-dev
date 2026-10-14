@@ -98,6 +98,12 @@ class Validate(unittest.TestCase):
         self.assertTrue(any("US-999" in e for e in trace_check.check(tmp)))
 
 
+class Branch(unittest.TestCase):
+    def test_branch_name(self):
+        import items
+        self.assertEqual(items.branch_name("US-001", ROOT), "feature/US-001-reset-password-by-email")
+
+
 class Runner(unittest.TestCase):
     RESP = (
         "notes\n<<<FILE: docs/qa/US-001.md>>>\n---\ntype: qa-report\nstory: US-001\nverdict: pass\ndate: 2026-10-14\n---\n"
