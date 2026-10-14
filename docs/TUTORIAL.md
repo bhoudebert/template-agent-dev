@@ -439,7 +439,17 @@ mise run review            # diff of this branch vs main (+ uncommitted changes)
 mise run review --post     # same, and comment it on the open PR
 ```
 
-The review is also written to `.agents/out/review-<id>.md`. In CI the same stage runs on every PR and posts one comment, once a model is configured there. Its quality is uneven: across two runs it once flagged the unbounded request body and once did not. Treat it as extra input, never as the review.
+The review is also written to `.agents/out/review-<id>.md`.
+
+How it behaves, so nothing surprises you:
+
+| Question | Answer |
+|---|---|
+| What does it review? | The **whole PR**: every commit against the PR's real base branch (stack-aware), plus uncommitted tracked changes. `mise run review --commit` reviews only the last commit. |
+| Will it add a new comment each run? | No. `--post` (and CI) update **one** marked comment in place. Your own comments are never touched, and it is never "the last comment". |
+| Can I post a last-commit review? | No, it is refused: it would replace the PR-wide review. |
+| What if it cannot list comments? | It posts nothing and says why. It never falls back to a duplicate. |
+| In CI? | The same stage runs on each PR, once a model is configured there; otherwise it skips with a notice. | Its quality is uneven: across two runs it once flagged the unbounded request body and once did not. Treat it as extra input, never as the review.
 
 ### 8.2 Your review **[YOU]**
 
