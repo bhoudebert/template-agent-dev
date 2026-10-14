@@ -20,5 +20,11 @@ if url=$(gh pr view --json url -q .url 2>/dev/null); then
 else
   # title = latest commit subject (--fill alone uses the branch name when there are several commits)
   # shellcheck disable=SC2086
-  gh pr create --base "$base" --fill --title "$(git log -1 --format=%s)" $draft
+  # body: what changed (commit subjects) + Refs derived from the branch and commit messages.
+  # `Refs: none` is a valid answer: not every change has a story, spec or ADR.
+  refs=$(printf '%s\n%s\n' "$branch" "$(git log "$base..HEAD" --format=%B)" \
+    | grep -oE '(US|INC)-[0-9]+|ADR-[0-9]{4}' | sort -u | paste -sd, - | sed 's/,/, /g')
+  body=$(printf '## What and why\n\n%s\n\n## Refs\n\nRefs: %s\n' \
+    "$(git log "$base..HEAD" --reverse --format='- %s')" "${refs:-none}")
+  gh pr create --base "$base" --title "$(git log -1 --format=%s)" --body "$body" $draft
 fi

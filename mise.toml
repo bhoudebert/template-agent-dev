@@ -72,6 +72,53 @@ flag "--base <branch>" default="main" help="PR base; use the parent branch for s
 '''
 run = 'sh tools/ship.sh "${usage_base}" "${usage_draft}"'
 
+[tasks.orient]
+description = "Prompt mode: rules in force, where this branch/story is, and what is next"
+usage = '''
+arg "[id]" help="US-NNN / INC-NNN; default: from the branch name"
+'''
+run = 'python3 tools/orient.py ${usage_id}'
+
+[tasks.next]
+description = "Who acts next on this branch/story, and the command"
+usage = '''
+arg "[id]" help="US-NNN / INC-NNN; default: from the branch name"
+'''
+run = 'python3 tools/orient.py next ${usage_id}'
+
+[tasks.prepare]
+description = "Prompt mode: write the stage bundle (the recipe) and print its receipt"
+usage = '''
+arg "<stage>" help="story|spec|design|implement|test|qa|review|release|diagnose"
+arg "<id>" help="Work item id"
+'''
+run = 'python3 tools/agentrun.py prepare "${usage_stage}" --id "${usage_id}"'
+
+[tasks.apply]
+description = "Prompt mode: verify the receipt, confine paths, validate, trace, log"
+usage = '''
+arg "<stage>" help="Stage name"
+arg "<id>" help="Work item id"
+flag "--receipt <code>" help="receipt printed at the end of the bundle"
+flag "--response <file>" help="file of <<<FILE: path>>> blocks ('-' = stdin)"
+flag "--worktree" help="you edited the files directly: verify them"
+'''
+run = '''
+set -e
+args=""
+[ -n "${usage_response}" ] && args="$args --response ${usage_response}"
+[ "${usage_worktree}" = "true" ] && args="$args --worktree"
+python3 tools/agentrun.py apply "${usage_stage}" --id "${usage_id}" --receipt "${usage_receipt}" $args
+'''
+
+[tasks.index]
+description = "Regenerate docs/INDEX.md (the map of stories, specs, ADRs, designs)"
+run = "python3 tools/index.py"
+
+[tasks."index:check"]
+description = "Fail if docs/INDEX.md is stale"
+run = "python3 tools/index.py --check"
+
 [tasks.status]
 description = "List stories, their status and the next stage"
 run = "python3 tools/items.py list"

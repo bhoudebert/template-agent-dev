@@ -8,7 +8,8 @@
 # Env: AGENT_BASE_REF overrides the base.
 set -e
 cd "$(dirname "$0")/.."
-branch=$(git branch --show-current)
+branch=$(git branch --show-current 2>/dev/null || git rev-parse --abbrev-ref HEAD 2>/dev/null || true)
+[ "$branch" = "HEAD" ] && branch=""
 id="$1"; post="$2"; commit_mode="$3"
 
 if [ "$commit_mode" = "true" ] && [ "$post" = "true" ]; then

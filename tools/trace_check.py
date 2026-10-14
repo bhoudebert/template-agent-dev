@@ -47,11 +47,13 @@ def check(root=ROOT):
         if status not in ORDER:
             continue
         rank = ORDER.index(status)
+        skip = meta.get("skip") or []
+        skip = skip if isinstance(skip, list) else [skip]
         change = root / "openspec" / "changes" / str(sid)
         archived = list((root / "openspec" / "changes" / "archive").glob(f"*{sid}*")) if (root / "openspec" / "changes" / "archive").is_dir() else []
-        if rank >= ORDER.index("specified") and not (change.is_dir() or archived):
+        if rank >= ORDER.index("specified") and "spec" not in skip and not (change.is_dir() or archived):
             errs.append(f"{sid}: status={status} but openspec/changes/{sid}/ missing")
-        if rank >= ORDER.index("designed") and not linked.get(sid):
+        if rank >= ORDER.index("designed") and "design" not in skip and not linked.get(sid):
             errs.append(f"{sid}: status={status} but no ADR/design references it")
         if status == "done":
             report = qa.get(sid)

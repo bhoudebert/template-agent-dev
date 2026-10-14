@@ -19,12 +19,34 @@ Artifacts are plain files in git; they are the only memory between stages.
 | `.agents/skills/` | Reusable procedures (ADR, OpenSpec, QA report, incident triage). |
 | `.agents/policies/` | Autonomy, security, gates, git/versioning. Always apply. |
 | `.agents/templates/` + `schemas/` | Required shape of each artifact. |
+| `docs/INDEX.md` | Generated map of stories, specs, ADRs, designs. Search it first. |
 | `docs/stories/` | User stories `US-001.md` |
 | `openspec/specs/`, `openspec/changes/<US-id>/` | Current behaviour; proposed deltas |
 | `docs/architecture/`, `docs/decisions/` | Design notes `US-001.md`; ADRs `ADR-0001-*.md` |
 | `docs/qa/`, `docs/incidents/`, `docs/runbooks/`, `docs/releases/` | QA reports, incidents `INC-001.md`, runbooks, release notes |
 | `src/`, `tests/` | Product code and tests |
 | `tools/` | Runner and validators (stdlib Python, no installs) |
+
+## Prompt mode (when you, an assistant, are driving)
+
+The same recipe applies; only the model differs. Never do stage work from memory.
+
+1. `mise run orient`: rules, branch, story status, next action.
+2. `mise run prepare <stage> <id>`: writes a bundle with the whole recipe and prints a receipt. **Read the whole bundle.**
+3. Do the stage. Write only to the paths the bundle allows.
+4. `mise run apply <stage> <id> --receipt <code> (--response FILE | --worktree)`: confines, validates, traces, logs.
+5. Show the user the result and the gate. **Wait for an explicit yes** before `advance`, `ship` or any merge.
+
+| User says | You run |
+|---|---|
+| "start a story: ..." | `mise run new "..."`, `mise run branch <id>`, then stage `story` |
+| "next" / "what now?" | `mise run next` |
+| "spec / design / implement / test / qa / release <id>" | `prepare` then `apply` for that stage |
+| "review my PR" | `mise run review` (whole PR); `--post` only when asked |
+| "I approve" | `mise run advance <id> <status>` (the status the user approved) |
+| "ship it" | `mise run ship` (never merge) |
+
+Search before you change behaviour: `docs/INDEX.md`, then `openspec/specs` and `docs/decisions`. Cite the story, requirement and ADR ids you implement in commits and PR bodies (`Refs: US-001, ADR-0002`); `Refs: none` is a valid answer, and not every story needs a spec, design or ADR (`skip:` in the story).
 
 ## Rules (all roles)
 

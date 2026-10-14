@@ -70,6 +70,14 @@ def check_file(path, root=ROOT):
     relaxed = schema.get("relaxed_when", {})
     if relaxed and all(meta.get(k) == v for k, v in relaxed.items()):
         return errs  # e.g. raw draft story: only frontmatter is enforced
+    if kind == "story":
+        skip = meta.get("skip") or []
+        skip = skip if isinstance(skip, list) else [skip]
+        bad = [s for s in skip if s not in ("spec", "design")]
+        if bad:
+            errs.append(f"{rel}: `skip` may only contain spec and design, not {bad}")
+        if skip and not meta.get("skip_reason"):
+            errs.append(f"{rel}: `skip` needs a `skip_reason` (say why this story needs no spec/design)")
     secs = _sections(body)
     for name in schema.get("sections", []):
         if name.lower() not in secs:
