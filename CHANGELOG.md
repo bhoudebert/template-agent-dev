@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.0](https://github.com/bhoudebert/template-agent-dev/compare/v0.1.1...v0.2.0) (2026-10-14)
+
+
+### Features
+
+* **agentkit:** version command and install guidance ([#26](https://github.com/bhoudebert/template-agent-dev/issues/26)) ([76fe8f2](https://github.com/bhoudebert/template-agent-dev/commit/76fe8f2cfc6e675f1d9737211eaa3732138990ea))
+* **kit:** agentkit todo, and a configurable test command for monorepos ([#25](https://github.com/bhoudebert/template-agent-dev/issues/25)) ([5f401aa](https://github.com/bhoudebert/template-agent-dev/commit/5f401aa3fae2f5e8e9781ab17c13b9629dbe0e3d))
+
 ## [0.1.1](https://github.com/bhoudebert/template-agent-dev/compare/v0.1.0...v0.1.1) (2026-10-14)
 
 
