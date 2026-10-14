@@ -170,14 +170,41 @@ How `mise run test` finds your tests (first match wins):
 
 | # | Source | For |
 |---|---|---|
-| 1 | `commands.test` in `.agents/pipeline.yaml` | one command line: `test: "make check"` |
-| 2 | `.agents/commands/test.sh` | a script **you own**; the kit never overwrites it |
-| 3 | the repo root: `Cargo.toml`, `go.mod`, `package.json` with a test script, `pyproject.toml`/`pytest.ini`, `pom.xml` | a single-project repo |
-| 4 | **one folder down**: each sub-folder with one of those markers (so `backend/` and `ui/` are found) | a monorepo |
+| 1 | **`.agents/tests.yaml`** (yours, the kit never ships or updates it) | declared suites: a name, a folder and a command each |
+| 2 | `commands.test` in `.agents/pipeline.yaml` | one command line: `test: "make check"` |
+| 3 | `.agents/commands/test.sh` | a script **you own** |
+| 4 | the repo root: `Cargo.toml`, `go.mod`, `package.json` with a test script, `pyproject.toml`/`pytest.ini`, `pom.xml` | a single-project repo |
+| 5 | **one folder down**: each sub-folder with one of those markers (so `backend/` and `ui/` are found) | a monorepo, zero config |
 
-See what it would run, without running it: `sh tools/projecttest.sh list`. Do **not** edit
-`tools/projecttest.sh` itself: it is kit-managed and an update overwrites it. If nothing is found, `mise run test`
-stops with instructions instead of pretending that nothing failed.
+The declared form, for when you want control:
+
+```yaml
+# .agents/tests.yaml
+suites:
+  - name: backend
+    dir: backend              # folder, default: the repo root
+    run: cargo test           # the command (required)
+    env: [RUST_LOG=warn]      # optional
+    timeout: 900              # optional, seconds
+  - name: ui
+    dir: ui
+    run: npm test
+  - name: e2e
+    dir: ui
+    run: npx playwright test
+    manual: true              # only when named: mise run test e2e
+    optional: true            # a failure is reported but does not fail the run
+```
+
+```sh
+mise run test              # every suite that is not manual; all run, a failure fails the run and names the suite
+mise run test backend ui   # only these
+mise run test:list         # what would run and why; runs nothing
+mise run test:init         # write .agents/tests.yaml from what was discovered, for you to edit
+```
+
+Do **not** edit `tools/projecttest.sh`: it is kit-managed and an update overwrites it. If nothing is found,
+`mise run test` stops with instructions instead of pretending that nothing failed.
 
 Pick a model (one of):
 

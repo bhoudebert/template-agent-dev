@@ -11,8 +11,19 @@ _.file = { path = ".env" }
 
 # ---------- dev ----------
 [tasks.test]
-description = "Run the PROJECT tests (auto-detects npm, pytest, go, cargo, mvn)"
-run = "sh tools/projecttest.sh"
+description = "Run the PROJECT tests (suites from .agents/tests.yaml, else auto-detected):  mise run test [suite ...]"
+usage = '''
+arg "[suite]" var=#true help="run only these suites (default: all that are not marked manual)"
+'''
+run = 'sh tools/projecttest.sh ${usage_suite}'
+
+[tasks."test:list"]
+description = "Show which test suites would run and why, without running them"
+run = "sh tools/projecttest.sh list"
+
+[tasks."test:init"]
+description = "Write .agents/tests.yaml from the suites found in this repository, for you to edit"
+run = "sh tools/projecttest.sh init"
 
 [tasks."test:tools"]
 description = "Run the template's own tool tests (tools/tests)"
