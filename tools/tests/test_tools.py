@@ -191,6 +191,53 @@ class Providers(unittest.TestCase):
         self.assertIn("length", str(ctx.exception))
 
 
+class Diff(unittest.TestCase):
+    def git(self, d, *a):
+        import subprocess
+        return subprocess.run(["git", "-C", str(d), "-c", "user.name=T", "-c", "user.email=t@example.com", *a],
+                              check=True, capture_output=True, text=True)
+
+    def test_diff_includes_branch_and_uncommitted_changes(self):
+        d = Path(tempfile.mkdtemp())
+        self.git(d, "init", "-q", "-b", "main")
+        (d / "a.txt").write_text("one\n")
+        self.git(d, "add", "-A"); self.git(d, "commit", "-q", "-m", "init")
+        self.git(d, "switch", "-q", "-c", "feature/x")
+        (d / "a.txt").write_text("one\ntwo\n")
+        self.git(d, "commit", "-qam", "feat: two")
+        (d / "a.txt").write_text("one\ntwo\nthree\n")  # uncommitted
+        os.environ["AGENT_BASE_REF"] = "main"
+        try:
+            diff = agentrun._diff(d)
+        finally:
+            del os.environ["AGENT_BASE_REF"]
+        self.assertIn("+two", diff)
+        self.assertIn("+three", diff)
+        self.assertIn("uncommitted changes", diff)
+
+    def test_review_script_picks_id_from_branch(self):
+        import subprocess
+        d = Path(tempfile.mkdtemp())
+        shutil.copytree(ROOT / "tools", d / "tools", ignore=shutil.ignore_patterns("tests", "__pycache__"))
+        for name in (".agents", "AGENTS.md", "CONTEXT.md"):
+            src = ROOT / name
+            shutil.copytree(src, d / name) if src.is_dir() else shutil.copy(src, d / name)
+        self.git(d, "init", "-q", "-b", "main")
+        (d / "f.txt").write_text("x\n")
+        self.git(d, "add", "-A"); self.git(d, "commit", "-q", "-m", "init")
+        self.git(d, "switch", "-q", "-c", "feature/US-042-thing")
+        (d / "f.txt").write_text("y\n")
+        self.git(d, "commit", "-qam", "feat(US-042): y")
+        canned = d / "reply.txt"
+        canned.write_text("## Review\nLooks fine.\n")
+        env = dict(os.environ, AGENT_PROVIDER="cmd", AGENT_CMD=f"cat {canned}")
+        proc = subprocess.run(["sh", "tools/review.sh"], cwd=d, env=env, capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("id=US-042", proc.stderr)
+        self.assertIn("Looks fine.", proc.stdout)
+        self.assertTrue((d / ".agents/out/review-US-042.md").exists())
+
+
 class Branch(unittest.TestCase):
     def test_branch_name(self):
         import items

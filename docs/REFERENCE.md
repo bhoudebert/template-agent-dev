@@ -15,7 +15,8 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `branch` | `<id>` | `git checkout -b feature/<US-id>-<slug>` (`fix/<INC-id>-<slug>` for incidents) |
 | `status` | | List stories, status, next stage |
 | `advance` | `<id> <status> [--force]` | Guarded status bump |
-| `story` `spec` `design` `implement` `qa` `review` `release` `diagnose` | `<id> [--dry\|--plan]` | Run that stage (aliases of `agent:<stage>`) |
+| `review` | `[id] [--post]` | Review the current branch's diff (plus uncommitted changes) and print it; `--post` comments on the open PR. Id defaults to the branch's `US-NNN`, else `PR-<n>` |
+| `story` `spec` `design` `implement` `qa` `release` `diagnose` | `<id> [--dry\|--plan]` | Run that stage (aliases of `agent:<stage>`) |
 | `agent:test` | `<id> [--dry\|--plan]` | Run the test-engineer stage |
 | `agent` | `<stage> <id> [--dry\|--plan]` | Run any stage |
 | `check` | | `validate` + `trace` + `test` |
