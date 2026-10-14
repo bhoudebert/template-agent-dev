@@ -342,6 +342,27 @@ class Emergency(unittest.TestCase):
         r = self.ship(d, "main", "", "true")
         self.assertNotEqual(r.returncode, 0)
 
+    def test_a_stale_local_base_does_not_put_merged_commits_in_the_range(self):
+        """A local `main` behind origin/main must not make already-merged commits count as this PR's."""
+        d = self.broken_repo()
+        remote = Path(tempfile.mkdtemp())
+        subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+        git(d, "switch", "-q", "main")
+        git(d, "remote", "add", "origin", str(remote))
+        git(d, "push", "-q", "origin", "main")
+        # origin/main moves ahead with a commit that names a bot (as a release merge does); local main stays behind
+        (d / "rel.txt").write_text("release")
+        git(d, "add", "-A")
+        git(d, "commit", "-q", "-m", "chore(main): release 1.0.0\n\nCo-authored-by: github-actions[bot] <1+github-actions[bot]@users.noreply.github.com>")
+        git(d, "push", "-q", "origin", "main")
+        git(d, "reset", "-q", "--hard", "HEAD~1")                       # local main is now stale
+        git(d, "fetch", "-q", "origin")
+        git(d, "switch", "-q", "-c", "fix/after-release", "origin/main")
+        (d / "z.txt").write_text("z")
+        git(d, "add", "-A"); git(d, "commit", "-q", "-m", "fix: something small")
+        r = self.ship(d, "main", "", "true")
+        self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_pre_push_hook_refuses_main_only(self):
         hook = str(ROOT / ".githooks" / "pre-push")
         z = "0" * 40
