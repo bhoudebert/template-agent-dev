@@ -58,7 +58,9 @@ Two things can stop that, both from mise, not from the kit:
 | mise says | Why | Do |
 |---|---|---|
 | `no versions found ... matching date filter` | mise hides releases younger than its release-age cooldown (a supply-chain guard), so a **brand-new** release is invisible for a while | wait, or bypass once: `mise use -g --minimum-release-age 0 "github:bhoudebert/template-agent-dev@latest"`, or exempt it for good: `mise settings add minimum_release_age_excludes github:bhoudebert/template-agent-dev` |
-| `No matching asset found for platform ...` | the release has no platform archive attached (`agentkit-<arch>-<os>.tar.gz`) | use the `curl` line above, or re-run the `release-pyz` workflow for that tag |
+| `No matching asset found for platform ...` | the release has no platform archive attached (`agentkit-<arch>-<os>.tar.gz`), **or mise is reading an old cached copy of the release** | see the cache row below; otherwise use the `curl` line above, or re-run the `release-pyz` workflow for that tag |
+| `GitHub rate limit exceeded` / `no versions found` for a release you can see | without a token mise asks GitHub's API anonymously: **60 requests an hour per IP**, shared by everything on your network. Mise then reports "no versions" instead of a clear error | give mise a token for the command: `GITHUB_TOKEN=$(gh auth token) mise use -g ...`, or export `GITHUB_TOKEN` (no scopes needed) |
+| `Available assets:` lists names that are **not** on the release page, or mise never sees a newer version | mise caches GitHub's release data for a long time. If it read the release while its assets were different (a draft, or edited afterwards), it keeps using that copy | `mise cache clear`, then retry. Your cache holds compressed files, so grepping it will not show the names |
 
 **From a clone** (before the first release, or to contribute):
 
@@ -271,6 +273,17 @@ edited (add `--force` to remove edited files too).
 | `agentkit check` fails | unresolved conflict markers: `agentkit reconcile`, or edit the files |
 | A stage runs for minutes then `model returned no text` | a thinking model used its budget: `AGENT_REASONING_EFFORT=none` |
 | `doctor` says hooks not enabled | `mise run hooks` |
+
+## For maintainers: publishing a release
+
+- Do **not** edit a release's assets after it is published. mise (and anyone who already installed) caches the
+  release data; a release that changed after being read is invisible or wrong until each cache is cleared.
+  Publish a new patch release instead.
+- The assets must keep this shape, which mise detects with no options: the same executable as
+  `agentkit-{x86_64,aarch64}-{unknown-linux-gnu,apple-darwin}.tar.gz` plus one `agentkit.sha256`. A platform-less
+  or extension-less asset, a raw `agentkit` file, or one `.sha256` per archive stops mise resolving the release.
+- `release-please.yml` builds and attaches them right after it creates the release (a release made with the
+  default token does not trigger other workflows). To re-attach by hand: `gh workflow run release-pyz.yml -f tag=vX.Y.Z`.
 
 ## What gets recorded
 
