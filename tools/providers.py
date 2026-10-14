@@ -7,7 +7,7 @@ openai : any OpenAI-compatible /chat/completions endpoint
               AGENT_REASONING_EFFORT (none|low|medium|high, sent as reasoning_effort),
               AGENT_MAX_TOKENS (sent as max_tokens)
 cmd    : pipe the prompt to any CLI on stdin, read the answer from stdout.
-         env: AGENT_CMD  e.g. "claude -p", "codex exec -", "ollama run llama3"
+         env: AGENT_CMD  e.g. "claude -p", "codex exec -", "ollama run gemma4:12b"
 dry    : no call; runner prints the prompt.
 """
 import json

@@ -108,7 +108,7 @@ Pick a model (one of):
 # local Ollama
 AGENT_PROVIDER=openai
 AGENT_BASE_URL=http://localhost:11434/v1
-AGENT_MODEL=llama3.1
+AGENT_MODEL=gemma4:12b
 AGENT_REASONING_EFFORT=none        # for "thinking" models: otherwise a stage can spend minutes and return nothing
 
 # hosted, any OpenAI-compatible API
