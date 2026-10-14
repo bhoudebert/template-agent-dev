@@ -156,6 +156,14 @@ flag "--plan" help="show what would change, write nothing"
 '''
 run = 'python3 tools/agentkit.py update ${usage_scope} $([ "${usage_plan}" = "true" ] && echo --plan)'
 
+[tasks."kit:reconcile"]
+description = "Resolve kit update conflicts with a model (or --brief to write briefs for an assistant)"
+usage = '''
+flag "--brief" help="write .agentkit/reconcile/*.md briefs instead of calling a model"
+flag "--plan" help="list the conflicted files"
+'''
+run = 'python3 tools/agentkit.py reconcile $([ "${usage_brief}" = "true" ] && echo --brief) $([ "${usage_plan}" = "true" ] && echo --plan)'
+
 [tasks."kit:check"]
 description = "Fail if kit files in this repo still contain unresolved merge conflict markers"
 run = "python3 tools/agentkit.py check"
