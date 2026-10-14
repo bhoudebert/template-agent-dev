@@ -86,6 +86,19 @@ class Validate(unittest.TestCase):
         (tmp / "tests" / "ghost.test.js").write_text("// x")
         self.assertEqual(validate.check_file(p, tmp), [])
 
+    def test_template_folders_skipped_only_at_root(self):
+        tmp = sandbox()
+        bad = "---\nid: US-777\ntype: story\ntitle: x\nstatus: enriched\nowner: po\n---\nno sections\n"
+        (tmp / "examples").mkdir(exist_ok=True)
+        (tmp / "examples" / "US-777.md").write_text(bad)           # template examples: skipped
+        (tmp / "docs" / "examples").mkdir(parents=True)
+        (tmp / "docs" / "examples" / "US-778.md").write_text(bad.replace("US-777", "US-778"))  # project folder: scanned
+        (tmp / "node_modules" / "pkg").mkdir(parents=True)
+        (tmp / "node_modules" / "pkg" / "US-779.md").write_text(bad)  # vendor: skipped
+        errs = validate.scan(tmp)
+        self.assertTrue(any("docs/examples/US-778.md" in e for e in errs), errs)
+        self.assertFalse(any("US-777" in e or "US-779" in e for e in errs), errs)
+
     def test_worked_example_is_valid(self):
         tmp = sandbox()
         self.assertEqual(validate.scan(tmp), [])

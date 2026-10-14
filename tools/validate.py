@@ -13,9 +13,9 @@ import sys
 from pathlib import Path
 
 import miniyaml
+import repowalk
 
 ROOT = Path(__file__).resolve().parent.parent
-SKIP_DIRS = {".git", ".agents", "node_modules", ".venv", "tools", "tests", "evals", "adapters", "examples"}
 CHANGE_SECTIONS = ("why", "what changes", "impact")
 SPEC_HEADERS = ("## added requirements", "## modified requirements", "## removed requirements", "## renamed requirements")
 
@@ -119,11 +119,8 @@ def check_change(change_dir, root=ROOT):
 
 def scan(root=ROOT):
     errs = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for name in filenames:
-            if name.endswith(".md"):
-                errs += check_file(Path(dirpath) / name, root)
+    for path in repowalk.iter_markdown(root):
+        errs += check_file(path, root)
     changes = Path(root) / "openspec" / "changes"
     if changes.is_dir():
         for d in sorted(changes.iterdir()):
