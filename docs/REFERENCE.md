@@ -152,7 +152,7 @@ paths:                              # stories architecture decisions qa incident
 suites: `name`, `dir`, `run`, and optional `env`, `timeout`, `manual`, `optional`; yours, never shipped or updated by
 the kit), then `commands.test` in this file, then a script of yours at `.agents/commands/test.sh`, then the
 repository root (Cargo.toml, go.mod, package.json with a test script, pyproject.toml/pytest.ini/setup.cfg,
-pom.xml), then each sub-folder with one of those markers. `mise run test:list` shows the result without running it,
+pom.xml), then each sub-folder with one of those markers (the last two are automatic: no config file needed). `run` is any shell command run in `dir`, so it can be one of your own mise tasks (`mise r <task>`); `env` is a list of `KEY=value`. `mise run test:list` shows the result without running it,
 `mise run test:init` writes `.agents/tests.yaml` from what was discovered.
 
 Changing the prefix does not rename existing files: rename them (and their `id:` / `story:` fields) in the same PR.
