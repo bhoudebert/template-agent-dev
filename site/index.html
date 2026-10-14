@@ -174,13 +174,18 @@ WRITE openspec/changes/US-001/specs/api/spec.md
     <article class="stage" id="s-story" data-label="Story">
       <header><h3>1 &middot; Story</h3><span class="meta">role analyst &middot; gate product owner</span></header>
       <div class="beats">
-        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li>Create the item and its branch</li><li>Write the request in your own words</li></ul></div>
-        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p>Turns the request into a story: Given/When/Then criteria, edge cases, out of scope, open questions.</p></div>
+        <div class="beat you"><span class="who you">You</span><h4>Before</h4><ul><li><code>new</code> creates the story file (title only)</li><li><code>branch</code> creates your branch</li><li><b>Write the request</b> in that file, in your own words</li></ul></div>
+        <div class="beat agent"><span class="who agent">Agent</span><h4>Runs</h4><p><b>Reads</b> your file and <code>CONTEXT.md</code>, then <b>rewrites the same file</b> as a story: Given/When/Then criteria, edge cases, out of scope, open questions.</p></div>
         <div class="beat you"><span class="who you">You</span><h4>Check at the gate</h4><ul><li>Are the criteria what you meant?</li><li>Every open question answered</li><li>Small enough to ship alone</li></ul></div>
         <div class="beat you"><span class="who you">You</span><h4>After</h4><ul><li><code>advance US-002 approved</code></li><li>Commit on the story branch</li></ul></div>
       </div>
-      <div class="io"><div><b>Reads</b><code>docs/stories/US-002.md</code> <code>CONTEXT.md</code></div><div><b>Writes</b><code>docs/stories/US-002.md</code></div><div><b>Status</b>draft &rarr; enriched (agent) &rarr; approved (you)</div></div>
-      <div class="cmd"><code>mise run new "Export invoices as CSV" &amp;&amp; mise run branch US-002 &amp;&amp; mise run story US-002</code><button class="copy" type="button" data-copy>Copy</button></div>
+      <div class="io"><div><b>Reads</b><code>docs/stories/US-001.md</code> (your request) <code>CONTEXT.md</code></div><div><b>Writes</b>the same file, enriched</div><div><b>Status</b>draft &rarr; enriched (agent) &rarr; approved (you)</div></div>
+      <div class="cmd"><code>mise run new "Export invoices as CSV" --text "Finance wants all invoices of a month as CSV, with a VAT column."</code><button class="copy" type="button" data-copy>Copy</button></div>
+      <p class="meta" style="margin:6px 0 0">1. Create it with your request (or create it, then edit the file). It prints the id it allocated, the next free <code>US-NNN</code>.</p>
+      <div class="cmd"><code>mise run branch US-001</code><button class="copy" type="button" data-copy>Copy</button></div>
+      <p class="meta" style="margin:6px 0 0">2. Branch off <code>main</code> before committing anything.</p>
+      <div class="cmd"><code>mise run story US-001</code><button class="copy" type="button" data-copy>Copy</button></div>
+      <p class="meta" style="margin:6px 0 0">3. The agent turns your request into the story. With no request written yet it refuses instead of guessing.</p>
     </article>
 
     <article class="stage" id="s-spec" data-label="Spec">

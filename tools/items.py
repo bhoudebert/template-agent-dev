@@ -25,6 +25,9 @@ NEXT_STAGE = {
 }
 
 
+PLACEHOLDER = "Describe the request in your own words here."
+
+
 def _next_id(prefix, folder, root):
     nums = [int(m.group(1)) for p in (Path(root) / folder).glob(f"{prefix}-*.md")
             if (m := re.match(rf"{prefix}-(\d+)", p.name))]
@@ -41,7 +44,7 @@ def new_story(title, root=ROOT, text=""):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         f"---\nid: {sid}\ntype: story\ntitle: {_clean(title)}\nstatus: draft\nowner: product-owner\n---\n"
-        f"{text or 'Describe the request in your own words here.'}\n", encoding="utf-8")
+        f"{text or PLACEHOLDER}\n", encoding="utf-8")
     return sid, path
 
 
@@ -112,8 +115,10 @@ def branch_name(item_id, root=ROOT):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("new-story", "new-incident"):
-        sub.add_parser(name).add_argument("title", nargs="+")
+    ns = sub.add_parser("new-story")
+    ns.add_argument("title", nargs="+")
+    ns.add_argument("--text", default="", help="the request in your own words (else edit the file)")
+    sub.add_parser("new-incident").add_argument("title", nargs="+")
     sub.add_parser("list")
     sub.add_parser("branch").add_argument("id")
     s = sub.add_parser("set-status")
@@ -122,8 +127,13 @@ def main(argv=None):
     s.add_argument("--force", action="store_true")
     a = ap.parse_args(argv)
     if a.cmd == "new-story":
-        sid, path = new_story(" ".join(a.title))
-        print(f"created {os.path.relpath(path, ROOT)}\nnext: edit it, then `mise run story {sid}`")
+        sid, path = new_story(" ".join(a.title), text=a.text)
+        rel = os.path.relpath(path, ROOT)
+        if a.text:
+            print(f"created {rel} with your request\nnext: `mise run branch {sid}`, then `mise run story {sid}`")
+        else:
+            print(f"created {rel} (title only, no request yet)\n"
+                  f"next: `mise run branch {sid}`, WRITE THE REQUEST in {rel}, then `mise run story {sid}`")
     elif a.cmd == "new-incident":
         iid, path = new_incident(" ".join(a.title))
         print(f"created {os.path.relpath(path, ROOT)}\nnext: paste evidence, then `mise run diagnose {iid}`")

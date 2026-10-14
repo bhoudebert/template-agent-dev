@@ -25,6 +25,7 @@ import miniyaml
 import providers
 
 ROOT = Path(__file__).resolve().parent.parent
+EXIT_NEEDS_INPUT = 6
 MAX_INPUT_CHARS = 100_000
 FILE_RE =re.compile(r"<<<FILE:\s*(.+?)\s*>>>\n(.*?)\n?<<<END>>>", re.DOTALL)
 
@@ -186,6 +187,22 @@ def single_target_fallback(response, out_globs):
     return {}
 
 
+def preflight(stage_name, item_id, root=ROOT):
+    """Problems that make a stage pointless to run. [] when fine."""
+    if stage_name == "story":
+        import items
+        path = Path(root) / "docs" / "stories" / f"{item_id}.md"
+        if not path.exists():
+            return [f"{path.relative_to(root)} does not exist: `mise run new <title>` first"]
+        _, body = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
+        text = body.strip()
+        if text in ("", items.PLACEHOLDER) or len(text) < 15:
+            return [f"{path.relative_to(root)} has no request yet (only the title). Write what is wanted "
+                    f"in your own words in that file, then run the story stage again. "
+                    f"(`mise run new <title> --text \"...\"` does it in one go.)"]
+    return []
+
+
 def run_checks(stage, written, root=ROOT):
     import trace_check
     import validate
@@ -220,6 +237,12 @@ def cmd_run(args, root=ROOT):
     stage = find_stage(load_pipeline(root), args.stage)
     system, user, out_globs = build_prompt(stage, args.id, root)
     provider = args.provider or os.environ.get("AGENT_PROVIDER", "openai")
+    if not (provider == "dry" or args.dry_run):
+        problems = preflight(args.stage, args.id, root)
+        if problems:
+            for p in problems:
+                print(f"NEEDS INPUT: {p}", file=sys.stderr)
+            return EXIT_NEEDS_INPUT
     if provider == "dry" or args.dry_run:
         print(system, "\n\n=====\n\n", user)
         return 0
