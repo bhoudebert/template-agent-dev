@@ -115,6 +115,54 @@ class Validate(unittest.TestCase):
         self.assertTrue(any("US-999" in e for e in trace_check.check(tmp)))
 
 
+class Providers(unittest.TestCase):
+    def serve(self, payload):
+        import http.server
+        import json
+        import threading
+        seen = {}
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                seen["body"] = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                raw = json.dumps(payload).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+
+            def log_message(self, *a):
+                pass
+
+        srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.shutdown)
+        return f"http://127.0.0.1:{srv.server_address[1]}/v1", seen
+
+    def env(self, **kv):
+        old = {k: os.environ.get(k) for k in kv}
+        os.environ.update(kv)
+        self.addCleanup(lambda: [os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v) for k, v in old.items()])
+
+    def test_reasoning_and_max_tokens_are_sent(self):
+        import providers
+        base, seen = self.serve({"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]})
+        self.env(AGENT_BASE_URL=base, AGENT_MODEL="m", AGENT_REASONING_EFFORT="none", AGENT_MAX_TOKENS="123")
+        self.assertEqual(providers.complete("s", "u", "strong", "openai"), "ok")
+        self.assertEqual(seen["body"]["reasoning_effort"], "none")
+        self.assertEqual(seen["body"]["max_tokens"], 123)
+
+    def test_empty_content_explains_thinking_budget(self):
+        import providers
+        base, _ = self.serve({"choices": [{"message": {"content": "", "reasoning": "x" * 50}, "finish_reason": "length"}]})
+        self.env(AGENT_BASE_URL=base, AGENT_MODEL="m")
+        with self.assertRaises(providers.ProviderError) as ctx:
+            providers.complete("s", "u", "strong", "openai")
+        self.assertIn("AGENT_REASONING_EFFORT", str(ctx.exception))
+        self.assertIn("length", str(ctx.exception))
+
+
 class Branch(unittest.TestCase):
     def test_branch_name(self):
         import items

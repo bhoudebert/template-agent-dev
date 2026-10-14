@@ -209,6 +209,7 @@ adapters/install.sh github tools
 | Symptom | Cause / fix |
 |---|---|
 | exit 3 `no model set` | export `AGENT_MODEL` (or `_STRONG/_CHEAP`) |
+| exit 3 `model returned no text` | a thinking model spent its whole budget reasoning (minutes, empty answer). Set `AGENT_REASONING_EFFORT=none` (or `low`) and `AGENT_MAX_TOKENS=16000`, or use a non-thinking model |
 | exit 3 `openai provider failed` | wrong `AGENT_BASE_URL`, server down, or timeout (`AGENT_TIMEOUT` seconds) |
 | exit 2 `no files in response` | model ignored the `<<<FILE: path>>> ... <<<END>>>` format; use a stronger model or retry; raw reply printed on stderr |
 | `REJECTED (outside allowed paths)` | model wrote a path not in the stage `out`; expected safety behaviour |

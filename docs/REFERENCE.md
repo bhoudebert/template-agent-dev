@@ -39,6 +39,8 @@ Stage flags: no flag = call the model, write files, run checks. `--plan` = call 
 | `AGENT_MODEL` | none | Model for all tiers |
 | `AGENT_MODEL_STRONG` | falls back to `AGENT_MODEL` | Model for `model: strong` stages |
 | `AGENT_MODEL_CHEAP` | falls back to `AGENT_MODEL` | Model for `model: cheap` stages |
+| `AGENT_REASONING_EFFORT` | unset | `none`, `low`, `medium`, `high`; sent as `reasoning_effort` (use `none` for local thinking models) |
+| `AGENT_MAX_TOKENS` | unset | Sent as `max_tokens`; bounds a runaway generation |
 | `AGENT_CMD` | none | Command for the `cmd` provider; prompt on stdin, answer on stdout |
 | `AGENT_TIMEOUT` | `600` | Seconds per model call |
 | `AGENT_BASE_REF` | `origin/main` | Base for the `@diff` input |
