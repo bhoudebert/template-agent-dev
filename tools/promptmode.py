@@ -163,6 +163,8 @@ def apply(stage_name, item_id, receipt, response=None, worktree=False, root=ROOT
         for path, content in accepted.items():
             target = root / path
             target.parent.mkdir(parents=True, exist_ok=True)
+            if agentrun.is_story_path(path) and target.exists():
+                content = agentrun.preserve_keys(target.read_text(encoding="utf-8"), content)
             target.write_text(content, encoding="utf-8")
             written.append(path)
             msgs.append(f"WRITE {path}")
@@ -181,6 +183,15 @@ def apply(stage_name, item_id, receipt, response=None, worktree=False, root=ROOT
             return 2, ["no files changed in the working tree"]
         written = changed
         msgs += [f"CHANGED {p}" for p in changed]
+        for p in changed:  # a rewritten story keeps `skip` / `skip_reason`
+            if agentrun.is_story_path(p) and (root / p).is_file():
+                old = _git(root, "show", f"HEAD:{p}")
+                if old.returncode == 0:
+                    cur = (root / p).read_text(encoding="utf-8")
+                    fixed = agentrun.preserve_keys(old.stdout, cur)
+                    if fixed != cur:
+                        (root / p).write_text(fixed, encoding="utf-8")
+                        msgs.append(f"RESTORED skip keys in {p}")
     else:
         return 2, ["pass --response FILE or --worktree"]
 

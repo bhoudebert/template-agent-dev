@@ -158,6 +158,52 @@ class Skip(unittest.TestCase):
         self.assertEqual(shutil_ok, ("approved", "implemented"))
 
 
+class SkipHelper(unittest.TestCase):
+    def test_set_skip_writes_keys_that_validate_and_advance_works(self):
+        d = Path(tempfile.mkdtemp())
+        import shutil
+        shutil.copytree(ROOT / ".agents", d / ".agents")
+        sid, path = items.new_story("Fix a typo", root=d, text="Fix the typo on the pricing page heading.")
+        with self.assertRaises(SystemExit):
+            items.set_skip(sid, ["spec", "design"], "", root=d)            # a reason is required
+        with self.assertRaises(SystemExit):
+            items.set_skip(sid, ["qa"], "x", root=d)                       # only spec/design
+        items.set_skip(sid, ["spec", "design"], "copy fix, no behaviour change", root=d)
+        text = path.read_text()
+        self.assertIn("skip: [spec, design]", text)
+        self.assertIn("skip_reason: copy fix, no behaviour change", text)
+        self.assertEqual(validate.check_file(path, d), [])
+        path.write_text(text.replace("status: draft", "status: approved"))
+        self.assertEqual(items.set_status(sid, "implemented", root=d), ("approved", "implemented"))
+        items.set_skip(sid, [], "", root=d)                                 # clear
+        self.assertNotIn("skip", path.read_text())
+
+    def test_rewrite_keeps_skip_keys_but_not_overrides(self):
+        import agentrun
+        old = "---\nid: US-1\ntype: story\nstatus: draft\nskip: [spec]\nskip_reason: tiny\n---\nraw\n"
+        new = "---\nid: US-1\ntype: story\nstatus: enriched\n---\n## Story\nx\n"
+        out = agentrun.preserve_keys(old, new)
+        self.assertIn("skip: [spec]", out)
+        self.assertIn("skip_reason: tiny", out)
+        self.assertIn("status: enriched", out)
+        self.assertTrue(out.endswith("## Story\nx\n"))
+        mine = "---\nid: US-1\ntype: story\nskip: [design]\nskip_reason: other\n---\nb\n"
+        self.assertEqual(agentrun.preserve_keys(old, mine), mine)           # never overwrite what the rewrite set
+
+    def test_story_stage_response_keeps_skip(self):
+        d = repo()
+        p = d / "docs/stories/US-001.md"
+        p.write_text(p.read_text().replace("status: designed\n", "status: designed\nskip: [design]\nskip_reason: tiny\n", 1))
+        git(d, "add", "-A"); git(d, "commit", "-q", "-m", "skip")
+        _, code, *_ = promptmode.prepare("story", "US-001", d)
+        rewritten = p.read_text().replace("skip: [design]\n", "").replace("skip_reason: tiny\n", "")
+        resp = d / "r.txt"
+        resp.write_text(f"<<<FILE: docs/stories/US-001.md>>>\n{rewritten}<<<END>>>\n")
+        rc, msgs = promptmode.apply("story", "US-001", code, response=str(resp), root=d)
+        self.assertEqual(rc, 0, msgs)
+        self.assertIn("skip: [design]", p.read_text())
+
+
 class Preflight(unittest.TestCase):
     def test_story_stage_refuses_an_empty_request(self):
         d = Path(tempfile.mkdtemp())

@@ -120,6 +120,15 @@ run = "python3 tools/index.py"
 description = "Fail if docs/INDEX.md is stale"
 run = "python3 tools/index.py --check"
 
+[tasks.skip]
+description = "Quick story: declare it needs no spec and/or no design:  mise run skip US-003 spec,design --reason \"copy fix\""
+usage = '''
+arg "<id>" help="Story id"
+arg "<stages>" help="spec, design, spec,design, or none to clear"
+flag "--reason <text>" help="why no spec/design is needed (required unless clearing)"
+'''
+run = 'python3 tools/items.py skip "${usage_id}" "${usage_stages}" --reason "${usage_reason}"'
+
 [tasks.status]
 description = "List stories, their status and the next stage"
 run = "python3 tools/items.py list"
