@@ -25,6 +25,7 @@
       <a href="#status">Status</a>
       <a href="#dev">Developer</a>
       <a href="#story">Example</a>
+      <a href="#review">Review</a>
       <a href="#git">Git</a>
       <a href="#safety">Safety</a>
       <a href="docs/workflow.html">Docs</a>
@@ -282,8 +283,52 @@
   </div>
 </section>
 
+<!-- ============ REVIEW ============ -->
+<section class="soft" id="review">
+  <div class="wrap">
+    <span class="kicker">The reviewer</span>
+    <h2>One review of the whole PR. One comment, updated in place.</h2>
+    <p class="lede">A review that only sees the latest push is useless, and a bot that adds a new comment every run is noise. The reviewer reads every commit of the PR against its real base branch and keeps a single comment current.</p>
+    <figure>
+      <svg viewBox="0 0 880 230" role="img" aria-labelledby="rt rd">
+        <title id="rt">Review scope on a stacked pull request</title>
+        <desc id="rd">main has a parent PR branch with one commit, and the feature branch stacked on it has two commits. The review covers the two feature commits against the parent branch; the parent's commit is not re-reviewed.</desc>
+        <line x1="20" y1="40" x2="860" y2="40" stroke="#2563eb" stroke-width="3"/>
+        <text x="20" y="24" class="mono">main</text>
+        <path d="M120 40 C140 40 140 110 170 110" fill="none" stroke="#94a3b8" stroke-width="3"/>
+        <line x1="170" y1="110" x2="360" y2="110" stroke="#94a3b8" stroke-width="3"/>
+        <circle cx="230" cy="110" r="6" fill="#94a3b8"/>
+        <text x="170" y="134" class="mono muted">parent PR branch</text>
+        <text x="230" y="92" text-anchor="middle" class="muted">parent commit</text>
+        <text x="230" y="154" text-anchor="middle" class="muted">not re-reviewed</text>
+        <path d="M360 110 C380 110 380 180 410 180" fill="none" stroke="#b45309" stroke-width="3"/>
+        <line x1="410" y1="180" x2="800" y2="180" stroke="#b45309" stroke-width="3"/>
+        <g fill="#b45309"><circle cx="480" cy="180" r="6"/><circle cx="600" cy="180" r="6"/><circle cx="720" cy="180" r="6"/></g>
+        <text x="410" y="210" class="mono">feature/US-042-export (this PR, base = parent branch)</text>
+        <rect x="440" y="150" width="310" height="44" rx="10" fill="none" stroke="#15803d" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="595" y="142" text-anchor="middle" fill="#15803d">reviewed: all of these commits, every run</text>
+      </svg>
+      <figcaption>The base comes from the PR itself (<code>gh pr view</code>), so stacked PRs are reviewed against their parent, not against <code>main</code>.</figcaption>
+    </figure>
+    <div class="cols c3" style="margin-top:22px">
+      <div class="card"><h3>Whole PR by default</h3><p><code>mise run review</code> covers every commit against the PR's base branch plus your uncommitted changes. <code>--commit</code> reviews just the last commit and is never posted.</p></div>
+      <div class="card"><h3>One comment, in place</h3><p><code>--post</code> and CI find their own marked comment and edit it. Never the "last comment", never a human's, never a second one.</p></div>
+      <div class="card"><h3>Safe on failure</h3><p>If listing comments fails, nothing is posted rather than a duplicate. One run per PR at a time; a newer push cancels the stale run.</p></div>
+    </div>
+    <div class="tbl" style="margin-top:22px"><table>
+      <thead><tr><th>Command</th><th>Reviews</th><th>Posts</th></tr></thead>
+      <tbody>
+        <tr><td><code>mise run review</code></td><td>whole PR vs its base (+ uncommitted)</td><td>no</td></tr>
+        <tr><td><code>mise run review --post</code></td><td>whole PR</td><td>one comment, updated in place</td></tr>
+        <tr><td><code>mise run review --commit</code></td><td>last commit only</td><td>never</td></tr>
+        <tr><td><code>mise run review --post --commit</code></td><td colspan="2">refused: a one-commit review must not replace the PR review</td></tr>
+      </tbody></table></div>
+    <p style="color:var(--muted)">It is advice, not a gate: it can miss things and report things that are not there. You verify every finding.</p>
+  </div>
+</section>
+
 <!-- ============ GIT ============ -->
-<section class="soft" id="git">
+<section id="git">
   <div class="wrap">
     <span class="kicker">Branches, commits, versions</span>
     <h2>PR mode, always. Trunk-based.</h2>
@@ -330,7 +375,7 @@
 </section>
 
 <!-- ============ SAFETY ============ -->
-<section id="safety">
+<section class="soft" id="safety">
   <div class="wrap">
     <span class="kicker">Guard rails</span>
     <h2>Agents propose. Scripts check. People decide.</h2>
@@ -341,13 +386,16 @@
       <div class="card"><h3>Humans own gates</h3><p>Agents never merge, deploy, tag or touch production. The runner has no code path for it.</p></div>
       <div class="card"><h3>PR mode, always</h3><p>No direct commits to <code>main</code>. Every change is a branch, a reviewed PR and a squash-merge.</p></div>
       <div class="card"><h3>Audit trail</h3><p>Every applied run logs stage, provider, prompt hash, files written and check errors to <code>.agents/runs/</code>.</p></div>
+      <div class="card"><h3>History stays human</h3><p>A commit-msg hook and a CI scan reject assistant or tool names in commits, authors and PR text. No trailers, no banners.</p></div>
+      <div class="card"><h3>No duplicate comments</h3><p>One review comment per author, matched by a hidden marker and updated in place. A failed lookup posts nothing.</p></div>
+      <div class="card"><h3>Unconfigured means skipped</h3><p>Agent workflows check for a model and skip with a notice. CI stays green and deterministic checks always run.</p></div>
     </div>
     <p style="margin-top:18px;color:var(--muted)">What is not guarded: whether the content is <em>right</em>. That is what the gates are for.</p>
   </div>
 </section>
 
 <!-- ============ MODELS ============ -->
-<section class="soft" id="models">
+<section id="models">
   <div class="wrap">
     <span class="kicker">Bring any model</span>
     <h2>Local, hosted or a CLI you already use.</h2>
@@ -370,7 +418,7 @@ AGENT_CMD="claude -p"
 </section>
 
 <!-- ============ QUICK START ============ -->
-<section id="quick">
+<section class="soft" id="quick">
   <div class="wrap">
     <span class="kicker">Quick start</span>
     <h2>Five minutes to a first stage.</h2>
@@ -400,7 +448,7 @@ AGENT_CMD="claude -p"
 </section>
 
 <!-- ============ DOCS ============ -->
-<section class="soft" id="docs">
+<section id="docs">
   <div class="wrap">
     <span class="kicker">Documentation</span>
     <h2>Read more.</h2>

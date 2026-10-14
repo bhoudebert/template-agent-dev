@@ -1,0 +1,29 @@
+{
+  "frontmatter": {
+    "required": [
+      "type",
+      "story",
+      "date",
+      "bump"
+    ],
+    "enums": {
+      "bump": [
+        "major",
+        "minor",
+        "patch",
+        "none"
+      ]
+    },
+    "patterns": {
+      "story": "^US-\\d{3,}$"
+    }
+  },
+  "sections": [
+    "Added",
+    "Changed",
+    "Fixed",
+    "Security",
+    "Go/No-Go checklist"
+  ],
+  "filename_starts_with": "story"
+}

@@ -9,4 +9,6 @@ Rules
 - Recommend mitigations a human executes; propose a fix story only when root cause is supported by evidence.
 - Fill `Not verified`; read-only posture: no actions on production.
 
+- A runbook (docs/runbooks/RB-NNN-<slug>.md, runbook template) only when the pattern is likely to recur; otherwise skip it.
+
 Done when: report matches incident template and validates.

@@ -51,12 +51,16 @@ Rule: content and core never use a vendor feature. Vendor specifics live only in
      .agents/skills/<each skill of the stage>.md
      .agents/policies/*.md          (alphabetical)
 3. build USER prompt
-     task: stage name, work item id, stage goal
+     task: stage name, work item id, TODAY'S DATE, stage goal   (models must not invent dates)
      inputs: each `in` glob, {id} substituted, each wrapped in <input path="...">
-     template: .agents/templates/<template>.md if the stage declares one
+             `@diff` expands to the review scope (see "The review design"), with a `# scope:` header
+     templates: every template the stage lists (`template: [design, adr]`)
      output contract: the allowed paths + the file block format
 4. provider.complete(system, user, tier)         # openai-compatible HTTP, or a CLI on stdin
+     sends reasoning_effort / max_tokens when AGENT_REASONING_EFFORT / AGENT_MAX_TOKENS are set
+     an empty reply is an error that names the cause (thinking model out of budget)
 5. parse <<<FILE: path>>> ... <<<END>>> blocks
+     fallback: a stage with exactly ONE concrete output path accepts a plain reply as that file
 6. keep only files whose normalised path matches an `out` glob
 7. (--apply) write files, run the stage's checks (validate / trace)
 8. append a JSON record to .agents/runs/ and print the gate
@@ -87,12 +91,30 @@ Anything outside a block is ignored (short notes are allowed before the first bl
 | Silent quality regression after a model change | Deterministic validators and trace check run after every apply; evals planned |
 | Secrets in prompts | Policy forbids; `.env` is git-ignored; `doctor` and `env` mask keys; redact evidence yourself before pasting |
 | Giant inputs | Each input file truncated at 100k characters; narrow `in:` globs |
+| A thinking model burns minutes and its whole context window, then returns nothing | `AGENT_REASONING_EFFORT=none`, `AGENT_MAX_TOKENS`; an empty reply fails with an explicit cause |
+| The agent claims evidence that does not exist (QA cites a missing test) | `validate` requires every file path cited in a QA report to exist; a human still spot-checks |
+| Files silently never validated | Template-owned folders are skipped only at the repo root; a project's `docs/examples/` is scanned (`tools/repowalk.py`) |
+| An assistant's name enters git history | `commit-msg` hook, a CI scan of PR title, body, commits, authors and committers, and `ship` refusing on `main` |
+| Duplicate or racing review comments | One marked comment per author, updated in place; a failing comment listing is a hard error, never a "create"; one review run per PR at a time |
+| Branch name or PR title used to inject shell | Workflows read them through `env`, never inline `${{ }}` in `run:` |
+| CI fails or spends money when no model is configured | Agent workflows check for configuration and skip with a notice |
 
 What is **not** guarded: whether the content is correct. That is the purpose of human gates.
 
 ## Validation and traceability
 
 `validate.py` reads the frontmatter `type`, loads `.agents/schemas/<type>.json` and checks required keys, enums, id patterns, required sections, empty sections and per-section regexes (acceptance criteria must contain Given/When/Then). OpenSpec change folders get their own checks: proposal sections, task checkboxes, spec deltas, `#### Scenario:` and SHALL/MUST.
+
+Additional rules the validator enforces:
+
+| Rule | Why |
+|---|---|
+| File name must start with the artifact's `id` (or `story` for design, QA and release notes) | `US-002.md` holding `id: US-001` breaks traceability and the status helper |
+| OpenSpec files carry no frontmatter | The folder name is the story id; keeps the format compatible with OpenSpec tooling |
+| Every file path cited in a QA report's Traceability exists | Catches invented evidence |
+| A raw `draft` story is only frontmatter-checked | Capture must be cheap |
+
+Scanning scope: `tools/repowalk.py` skips `.agents`, `tools`, `tests`, `evals`, `adapters` and `examples` **only at the repository root**, and `.git`, `node_modules`, `.venv`, `__pycache__` at any depth.
 
 `trace_check.py` enforces the chain by story status:
 
@@ -102,6 +124,51 @@ What is **not** guarded: whether the content is correct. That is the purpose of 
 == done        docs/qa/<id>.md exists with verdict: pass
 always         every adr/design/qa-report points at an existing story
 ```
+
+## The review design
+
+The reviewer is a normal stage (`review`) whose input is `@diff`. Two decisions make it useful.
+
+### Scope: the whole PR, not "latest changes"
+
+`tools/review.sh` resolves what to review:
+
+```
+default (and --post)   all commits of the branch against the PR's REAL base branch
+                       base = gh pr view baseRefName  ->  origin/<base>
+                       fallback: origin/main, then main        (AGENT_BASE_REF overrides)
+                       + uncommitted changes to tracked files
+--commit               only HEAD (message + patch)
+--post with --commit   refused: a one-commit review must not replace the PR-wide comment
+```
+
+Reading the base from `gh` is what makes **stacked PRs** work: PR 5 stacked on PR 4 is reviewed against PR 4's branch, so the parent's changes are not re-reviewed. The reviewer receives a `# scope:` header line, and the posted comment states the scope and the reviewed commit.
+
+CI uses the same scope: `AGENT_BASE_REF=origin/<github.base_ref>` with full history.
+
+### One comment, updated in place
+
+`tools/post_review.sh` keeps a single comment per author:
+
+```
+1. list the PR's comments                       (failure here is fatal: never fall through to create)
+2. keep comments where
+     author == current user                     (gh api user; github-actions[bot] in CI)
+   AND ( body contains <!-- agent-review:v1 -->
+         OR body starts with "# Review:" and contains "## Findings" )   # adopts pre-marker comments
+3. found   -> PATCH the first match (oldest)
+   missing -> create a new comment
+```
+
+| Question | Answer |
+|---|---|
+| Is a human comment ever overwritten? | No. Only the author's own comment carrying the marker (or the legacy shape) is touched. It is never "the last comment". |
+| Local run and CI both post? | Two comments, one per author. You cannot edit another author's comment. |
+| Two CI runs at once? | The workflow's `concurrency` group is one run per PR; a newer push cancels the stale run. |
+| Listing fails (auth, permissions)? | Hard error, nothing posted. Never a duplicate. |
+| History of earlier findings? | Overwritten by design; GitHub's "edited" dropdown keeps previous text. |
+
+The review is advice: across runs it has found real defects and also reported things that were not there. A human reviews the PR.
 
 ## Providers
 
@@ -115,12 +182,32 @@ Model tiers: a stage says `model: cheap` or `strong`; the runner reads `AGENT_MO
 
 ## CI and release
 
-| Workflow | Trigger | Does |
+| Workflow | Trigger | Does | Without configuration |
+|---|---|---|---|
+| `ci.yml` | PR, push | PR title is a Conventional Commit; no assistant names in PR text, commits or authors; validate; trace; tool tests; project tests (Node set up when `package.json` exists) | always runs |
+| `agent-review.yml` | PR opened, updated, reopened | `review` on the whole PR, one comment updated in place; serialised per PR | skips with a notice |
+| `agent-triage.yml` | Issue labelled `agent:enrich` | Seeds `US-<n>`, runs `story`, opens a PR authored by the person who labelled | skips with a notice |
+| `release-please.yml` | Push to `main` | Maintains the release PR; first release is `0.1.0`; tag and changelog on merge | n/a |
+| `pages.yml` | Push to `main` touching docs or site | Builds `site/` and publishes it | n/a |
+
+Model configuration for CI lives in repository variables and one secret (see `GUIDE.md`). A GitHub-hosted runner cannot reach a model on your own machine; use a hosted API or a self-hosted runner.
+
+## Test layout
+
+| Path | Belongs to | Runs with |
 |---|---|---|
-| `ci.yml` | PR, push | PR title is a Conventional Commit; validate; trace; unit tests |
-| `agent-review.yml` | PR opened or updated | Runs `review` stage on the diff, posts one comment |
-| `agent-triage.yml` | Issue labelled `agent:enrich` | Seeds `US-<n>` from the issue, runs `story`, opens a PR |
-| `release-please.yml` | Push to `main` | Maintains the release PR; tag and changelog on merge |
+| `tests/` | **Your project** (Node, Python, ...). The `implement` and `test` stages write here. | `mise run test` (auto-detects npm, pytest, go, cargo, mvn) |
+| `tools/tests/` | The template's own tooling | `mise run test:tools` |
+| `examples/password-reset/` | A complete worked story, not scanned, not part of your history | read it, or delete it |
+
+## Git and history guard rails
+
+| Guard | Where | Effect |
+|---|---|---|
+| `.githooks/commit-msg` | local, enabled by `mise run hooks` | rejects a message naming an assistant or tool |
+| `tools/check_attribution.py` | CI | scans PR title, body, every commit message, author and committer |
+| `mise run ship` | local | refuses on `main`; runs checks; pushes; opens or reuses the PR; title is the latest commit subject |
+| squash-merge + Conventional Commit title | repo setting + CI | one clean, typed commit per story on `main`; drives release-please |
 
 ## Extending
 

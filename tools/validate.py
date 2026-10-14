@@ -13,9 +13,9 @@ import sys
 from pathlib import Path
 
 import miniyaml
+import repowalk
 
 ROOT = Path(__file__).resolve().parent.parent
-SKIP_DIRS = {".git", ".agents", "node_modules", ".venv", "tools", "tests", "evals", "adapters"}
 CHANGE_SECTIONS = ("why", "what changes", "impact")
 SPEC_HEADERS = ("## added requirements", "## modified requirements", "## removed requirements", "## renamed requirements")
 
@@ -37,6 +37,8 @@ def _sections(body):
 def check_file(path, root=ROOT):
     path = Path(path)
     rel = os.path.relpath(path, root)
+    if Path(rel).parts[:1] == ("openspec",):
+        return []  # OpenSpec files are checked by check_change(), not by artifact schema
     try:
         meta, body = miniyaml.split_frontmatter(path.read_text(encoding="utf-8"))
     except ValueError as e:
@@ -59,6 +61,12 @@ def check_file(path, root=ROOT):
     for key, pattern in fm.get("patterns", {}).items():
         if key in meta and not re.match(pattern, str(meta[key])):
             errs.append(f"{rel}: `{key}`={meta[key]!r} does not match {pattern}")
+    fname_key = schema.get("filename_starts_with")
+    if fname_key and meta.get(fname_key):
+        want = str(meta[fname_key])
+        name = Path(path).name
+        if name != f"{want}.md" and not name.startswith(f"{want}-"):
+            errs.append(f"{rel}: file name must be `{want}.md` or `{want}-<slug>.md` (frontmatter {fname_key}: {want})")
     relaxed = schema.get("relaxed_when", {})
     if relaxed and all(meta.get(k) == v for k, v in relaxed.items()):
         return errs  # e.g. raw draft story: only frontmatter is enforced
@@ -68,6 +76,10 @@ def check_file(path, root=ROOT):
             errs.append(f"{rel}: missing section `## {name}`")
         elif not secs[name.lower()].strip():
             errs.append(f"{rel}: section `## {name}` is empty")
+    if kind == "qa-report":
+        for token in re.findall(r"`([^`\s]+\.[A-Za-z0-9]+)`", secs.get("traceability", "")):
+            if "/" in token and not (Path(root) / token).exists():
+                errs.append(f"{rel}: cited evidence file does not exist: {token}")
     for name, pattern in schema.get("section_patterns", {}).items():
         text = secs.get(name.lower(), "")
         if text.strip() and not re.search(pattern, text):
@@ -80,6 +92,9 @@ def check_change(change_dir, root=ROOT):
     change_dir = Path(change_dir)
     rel = os.path.relpath(change_dir, root)
     errs = []
+    for md in sorted(change_dir.rglob("*.md")):
+        if md.read_text(encoding="utf-8").startswith("---"):
+            errs.append(f"{os.path.relpath(md, root)}: OpenSpec files must not have frontmatter (the folder name is the story id)")
     proposal = change_dir / "proposal.md"
     if not proposal.exists():
         errs.append(f"{rel}: missing proposal.md")
@@ -110,11 +125,8 @@ def check_change(change_dir, root=ROOT):
 
 def scan(root=ROOT):
     errs = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for name in filenames:
-            if name.endswith(".md"):
-                errs += check_file(Path(dirpath) / name, root)
+    for path in repowalk.iter_markdown(root):
+        errs += check_file(path, root)
     changes = Path(root) / "openspec" / "changes"
     if changes.is_dir():
         for d in sorted(changes.iterdir()):
