@@ -8,10 +8,11 @@
 <meta property="og:title" content="AgenticDev: an agent at every step, a human at every gate">
 <meta property="og:description" content="From request to production with one role-agent per step, artifacts in git, and people deciding at every gate. Bring any model.">
 <meta name="color-scheme" content="light">
+<meta name="theme-color" content="#c2410c">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script>document.documentElement.className += " js";</script>
 </head>
@@ -40,31 +41,103 @@
 <section class="hero" id="top">
   <div class="wrap">
     <div>
-      <span class="eyebrow">Vendor-neutral &middot; local models welcome &middot; zero dependencies</span>
-      <h1>An agent at every step. <em>A human at every gate.</em></h1>
-      <p class="lede">From a rough request to a tagged release and a production incident, one role-agent per step. Everything is a file in git, every step ends with a person deciding, and nothing reaches <code>main</code> except through a pull request.</p>
+      <a class="pill" href="docs/tutorial.html"><i aria-hidden="true">&#9654;</i><span><b>mise run story</b>, one story end to end</span><span aria-hidden="true">&rarr;</span></a>
+      <h1 class="hero-title">AgenticDev</h1>
+      <p class="hero-sub">An agent at every step. A human at every gate.</p>
+      <p class="hero-note">Vendor-neutral. Any model: local, hosted or a CLI you already use.</p>
+      <p class="hero-lede">From a rough request to a tagged release and a production incident, one role-agent per step. Everything is a file in git, every step ends with a person deciding, and nothing reaches <code>main</code> except through a pull request.</p>
       <div class="cta">
-        <a class="btn primary" href="#loop">See whose turn it is</a>
-        <a class="btn" href="docs/tutorial.html">Follow the tutorial</a>
+        <a class="btn primary" href="docs/tutorial.html">Follow the tutorial <span aria-hidden="true">&rarr;</span></a>
+        <a class="btn" href="#loop">See whose turn it is</a>
       </div>
       <div class="install">
         <code id="cmd">git clone https://github.com/bhoudebert/template-agent-dev &amp;&amp; cd template-agent-dev &amp;&amp; mise run doctor</code>
         <button type="button" class="copy" data-copy-id="cmd" aria-label="Copy the install command">Copy</button>
       </div>
+      <p class="hero-foot">Needs <a href="https://mise.jdx.dev">mise</a>, git and Python 3.10+. No packages to install.</p>
     </div>
-    <div class="term" role="img" aria-label="Terminal example: create a story, plan the story stage, advance status, run checks">
-      <div class="bar">~/my-product &mdash; feature/US-002-export-invoices-as-csv</div>
-      <div class="body">
-<div class="l"><span class="c">$</span> mise run new "Export invoices as CSV"</div>
-<div class="l"><span class="d">created docs/stories/US-002.md</span></div>
-<div class="l"><span class="c">$</span> mise run branch US-002</div>
-<div class="l"><span class="c">$</span> mise run story US-002 --plan</div>
-<div class="l"><span class="d">WOULD WRITE docs/stories/US-002.md</span></div>
-<div class="l"><span class="y">gate: human:product-owner</span>   <span class="d"># your turn</span></div>
-<div class="l"><span class="c">$</span> mise run advance US-002 approved</div>
-<div class="l"><span class="g">US-002: enriched -> approved</span></div>
-<div class="l"><span class="c">$</span> mise run check</div>
-<div class="l"><span class="g">validate: 0 error(s)  trace_check: 0 problem(s)</span></div>
+
+    <div class="workbench" id="wb">
+      <div class="wb-head"><b>mise.toml</b><span>Tasks you will actually type</span></div>
+      <div class="wb-tabs" role="tablist" aria-label="Examples">
+        <button type="button" role="tab" data-wb="capture">Capture</button>
+        <button type="button" role="tab" data-wb="stage">Run a stage</button>
+        <button type="button" role="tab" data-wb="check">Check</button>
+        <button type="button" role="tab" data-wb="ship">Ship</button>
+      </div>
+      <div class="wb-pane" data-wb="capture"><span class="c"># Next id, raw story, and its branch</span>
+<span class="k">[tasks.new]</span>
+run = <span class="s">"python3 tools/items.py new-story ..."</span>
+<span class="k">[tasks.branch]</span>
+run = <span class="s">"python3 tools/items.py branch ..."</span></div>
+      <div class="wb-pane" data-wb="stage"><span class="c"># One role-agent per stage; --dry prints the prompt</span>
+<span class="k">[tasks."agent:spec"]</span>
+alias = <span class="s">"spec"</span>
+run = <span class="s">"sh tools/stage.sh spec ..."</span></div>
+      <div class="wb-pane" data-wb="check"><span class="c"># Deterministic: no model involved</span>
+<span class="k">[tasks.check]</span>
+depends = [<span class="s">"validate"</span>, <span class="s">"trace"</span>, <span class="s">"test"</span>]</div>
+      <div class="wb-pane" data-wb="ship"><span class="c"># Push early; refuses on main</span>
+<span class="k">[tasks.ship]</span>
+run = <span class="s">"sh tools/ship.sh ..."</span></div>
+      <div class="wb-out" aria-live="polite">
+        <small><span>Example output</span><span>~/my-product</span></small>
+        <div data-for="capture"><span class="p">$</span> mise run new Export invoices as CSV
+<span class="g">created docs/stories/US-001.md</span>
+<span class="p">$</span> mise run branch US-001
+<span class="d">feature/US-001-export-invoices-as-csv</span></div>
+        <div data-for="stage"><span class="p">$</span> mise run spec US-001
+WRITE openspec/changes/US-001/proposal.md
+WRITE openspec/changes/US-001/specs/api/spec.md
+<span class="y">gate: human:product-owner+tech-lead</span></div>
+        <div data-for="check"><span class="p">$</span> mise run check
+<span class="g">validate: 0 error(s)</span>
+<span class="g">trace_check: 0 problem(s)</span>
+<span class="g">ℹ pass 14  ℹ fail 0</span></div>
+        <div data-for="ship"><span class="p">$</span> mise run ship
+<span class="d">checks ok, branch pushed</span>
+<span class="g">https://github.com/you/shorty/pull/12</span></div>
+      </div>
+      <div class="wb-foot"><a href="docs/reference.html">Explore all tasks</a><span aria-hidden="true">&rarr;</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="strip"><div class="wrap">
+  <span>Local models welcome</span>
+  <span>Nine role-agents, one per stage</span>
+  <span>Standard-library Python, no dependencies</span>
+  <span>Humans at every gate</span>
+</div></div>
+
+<section id="manage">
+  <div class="wrap">
+    <span class="kicker">What it manages</span>
+    <h2>The whole lifecycle, from one set of files.</h2>
+    <div class="manage">
+      <div style="--c: var(--accent-1); --c-ink: var(--accent-1-ink)">
+        <span class="cmd-line">$ mise run story US-001</span>
+        <h3>Stories &amp; specs</h3>
+        <p>Turn a paragraph into a testable story and an OpenSpec change. Open questions are written down, not guessed.</p>
+        <a href="#loop">Read the stages &rarr;</a>
+      </div>
+      <div style="--c: var(--accent-2); --c-ink: var(--accent-2-ink)">
+        <span class="cmd-line">$ mise run implement US-001</span>
+        <h3>Design &amp; code</h3>
+        <p>ADRs for real decisions, then the smallest diff that satisfies the spec, one task at a time, with you reading every line.</p>
+        <a href="#dev">The developer loop &rarr;</a>
+      </div>
+      <div style="--c: var(--accent-3); --c-ink: var(--accent-3-ink)">
+        <span class="cmd-line">$ mise run check</span>
+        <h3>Checks &amp; QA</h3>
+        <p>Schemas, traceability and evidence are checked by scripts. QA gives a verdict and says what it could not verify.</p>
+        <a href="#safety">Guard rails &rarr;</a>
+      </div>
+      <div style="--c: var(--accent-4); --c-ink: var(--accent-4-ink)">
+        <span class="cmd-line">$ mise run review --post</span>
+        <h3>Review &amp; ship</h3>
+        <p>One review of the whole PR, one comment updated in place, Conventional Commits, and versions by release-please.</p>
+        <a href="#review">How review works &rarr;</a>
       </div>
     </div>
   </div>
@@ -294,20 +367,20 @@
       <svg viewBox="0 0 880 230" role="img" aria-labelledby="rt rd">
         <title id="rt">Review scope on a stacked pull request</title>
         <desc id="rd">main has a parent PR branch with one commit, and the feature branch stacked on it has two commits. The review covers the two feature commits against the parent branch; the parent's commit is not re-reviewed.</desc>
-        <line x1="20" y1="40" x2="860" y2="40" stroke="#2563eb" stroke-width="3"/>
+        <line x1="20" y1="40" x2="860" y2="40" stroke="#2c2428" stroke-width="3"/>
         <text x="20" y="24" class="mono">main</text>
-        <path d="M120 40 C140 40 140 110 170 110" fill="none" stroke="#94a3b8" stroke-width="3"/>
-        <line x1="170" y1="110" x2="360" y2="110" stroke="#94a3b8" stroke-width="3"/>
-        <circle cx="230" cy="110" r="6" fill="#94a3b8"/>
+        <path d="M120 40 C140 40 140 110 170 110" fill="none" stroke="#a8a29e" stroke-width="3"/>
+        <line x1="170" y1="110" x2="360" y2="110" stroke="#a8a29e" stroke-width="3"/>
+        <circle cx="230" cy="110" r="6" fill="#a8a29e"/>
         <text x="170" y="134" class="mono muted">parent PR branch</text>
         <text x="230" y="92" text-anchor="middle" class="muted">parent commit</text>
         <text x="230" y="154" text-anchor="middle" class="muted">not re-reviewed</text>
-        <path d="M360 110 C380 110 380 180 410 180" fill="none" stroke="#b45309" stroke-width="3"/>
-        <line x1="410" y1="180" x2="800" y2="180" stroke="#b45309" stroke-width="3"/>
-        <g fill="#b45309"><circle cx="480" cy="180" r="6"/><circle cx="600" cy="180" r="6"/><circle cx="720" cy="180" r="6"/></g>
+        <path d="M360 110 C380 110 380 180 410 180" fill="none" stroke="#ea580c" stroke-width="3"/>
+        <line x1="410" y1="180" x2="800" y2="180" stroke="#ea580c" stroke-width="3"/>
+        <g fill="#ea580c"><circle cx="480" cy="180" r="6"/><circle cx="600" cy="180" r="6"/><circle cx="720" cy="180" r="6"/></g>
         <text x="410" y="210" class="mono">feature/US-042-export (this PR, base = parent branch)</text>
-        <rect x="440" y="150" width="310" height="44" rx="10" fill="none" stroke="#15803d" stroke-width="2" stroke-dasharray="5 4"/>
-        <text x="595" y="142" text-anchor="middle" fill="#15803d">reviewed: all of these commits, every run</text>
+        <rect x="440" y="150" width="310" height="44" rx="10" fill="none" stroke="#4d7c0f" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="595" y="142" text-anchor="middle" fill="#4d7c0f">reviewed: all of these commits, every run</text>
       </svg>
       <figcaption>The base comes from the PR itself (<code>gh pr view</code>), so stacked PRs are reviewed against their parent, not against <code>main</code>.</figcaption>
     </figure>
@@ -338,26 +411,26 @@
       <svg viewBox="0 0 880 250" role="img" aria-labelledby="gt gd">
         <title id="gt">Git flow</title>
         <desc id="gd">A story branch leaves main, collects commits, and is squash-merged by pull request. release-please then opens a release pull request which, once merged, creates the tag v1.1.0.</desc>
-        <line x1="20" y1="50" x2="860" y2="50" stroke="#2563eb" stroke-width="3"/>
+        <line x1="20" y1="50" x2="860" y2="50" stroke="#2c2428" stroke-width="3"/>
         <text x="20" y="32" class="mono">main</text>
-        <circle cx="60" cy="50" r="7" fill="#2563eb"/><text x="60" y="76" text-anchor="middle" class="mono muted">v1.0.0</text>
-        <path d="M120 50 C140 50 140 150 170 150" fill="none" stroke="#b45309" stroke-width="3"/>
-        <line x1="170" y1="150" x2="470" y2="150" stroke="#b45309" stroke-width="3"/>
-        <path d="M470 150 C500 150 500 50 530 50" fill="none" stroke="#b45309" stroke-width="3"/>
-        <circle cx="120" cy="50" r="5" fill="#2563eb"/>
-        <g fill="#b45309"><circle cx="210" cy="150" r="6"/><circle cx="290" cy="150" r="6"/><circle cx="370" cy="150" r="6"/><circle cx="440" cy="150" r="6"/></g>
+        <circle cx="60" cy="50" r="7" fill="#2c2428"/><text x="60" y="76" text-anchor="middle" class="mono muted">v1.0.0</text>
+        <path d="M120 50 C140 50 140 150 170 150" fill="none" stroke="#ea580c" stroke-width="3"/>
+        <line x1="170" y1="150" x2="470" y2="150" stroke="#ea580c" stroke-width="3"/>
+        <path d="M470 150 C500 150 500 50 530 50" fill="none" stroke="#ea580c" stroke-width="3"/>
+        <circle cx="120" cy="50" r="5" fill="#2c2428"/>
+        <g fill="#ea580c"><circle cx="210" cy="150" r="6"/><circle cx="290" cy="150" r="6"/><circle cx="370" cy="150" r="6"/><circle cx="440" cy="150" r="6"/></g>
         <text x="170" y="185" class="mono">feature/US-002-export-invoices-as-csv</text>
         <text x="210" y="125" text-anchor="middle" class="muted">docs: spec</text>
         <text x="290" y="125" text-anchor="middle" class="muted">docs: design</text>
         <text x="370" y="125" text-anchor="middle" class="muted">feat: task</text>
         <text x="440" y="125" text-anchor="middle" class="muted">test + qa</text>
-        <circle cx="530" cy="50" r="7" fill="#2563eb"/>
+        <circle cx="530" cy="50" r="7" fill="#2c2428"/>
         <text x="530" y="20" text-anchor="middle">PR squash-merge</text>
         <text x="530" y="76" text-anchor="middle" class="mono muted">feat(US-002)</text>
-        <rect x="590" y="88" width="150" height="34" rx="8" fill="#dcfce7" stroke="#15803d"/>
+        <rect x="590" y="88" width="150" height="34" rx="8" fill="#ecfccb" stroke="#4d7c0f"/>
         <text x="665" y="109" text-anchor="middle">release PR (auto)</text>
-        <path d="M665 88 C665 70 700 66 720 50" fill="none" stroke="#15803d" stroke-width="2" stroke-dasharray="4 4"/>
-        <circle cx="760" cy="50" r="7" fill="#15803d"/>
+        <path d="M665 88 C665 70 700 66 720 50" fill="none" stroke="#4d7c0f" stroke-width="2" stroke-dasharray="4 4"/>
+        <circle cx="760" cy="50" r="7" fill="#4d7c0f"/>
         <text x="760" y="20" text-anchor="middle">merge release PR</text>
         <text x="760" y="76" text-anchor="middle" class="mono muted">tag v1.1.0</text>
       </svg>
@@ -494,12 +567,35 @@ AGENT_CMD="claude -p"
     });
   });
 
+  // Hero workbench tabs (progressive enhancement: without JS every pane and output is visible).
+  var wb = document.getElementById("wb");
+  if (wb) {
+    var wbTabs = Array.prototype.slice.call(wb.querySelectorAll('[role=tab][data-wb]'));
+    var wbPanes = wb.querySelectorAll(".wb-pane");
+    var wbOuts = wb.querySelectorAll(".wb-out > div[data-for]");
+    var pick = function (name) {
+      wbTabs.forEach(function (b) { var on = b.getAttribute("data-wb") === name; b.setAttribute("aria-selected", on ? "true" : "false"); b.tabIndex = on ? 0 : -1; });
+      wbPanes.forEach(function (n) { n.classList.toggle("on", n.getAttribute("data-wb") === name); });
+      wbOuts.forEach(function (n) { n.classList.toggle("on", n.getAttribute("data-for") === name); });
+    };
+    wbTabs.forEach(function (b, i) {
+      b.addEventListener("click", function () { pick(b.getAttribute("data-wb")); });
+      b.addEventListener("keydown", function (e) {
+        var n = wbTabs.length, j = null;
+        if (e.key === "ArrowRight") j = (i + 1) % n;
+        if (e.key === "ArrowLeft") j = (i - 1 + n) % n;
+        if (j !== null) { e.preventDefault(); wbTabs[j].focus(); pick(wbTabs[j].getAttribute("data-wb")); }
+      });
+    });
+    pick("capture");
+  }
+
   // Stage explorer: progressive enhancement. Without JS every stage stays visible.
   var tabs = document.getElementById("tabs");
   var stages = Array.prototype.slice.call(document.querySelectorAll("article.stage"));
   if (!tabs || !stages.length) return;
   var buttons = [];
-  function select(i, focus) {
+  function select(i, focus, userAction) {
     stages.forEach(function (s, j) {
       var on = i === j;
       s.classList.toggle("on", on);
@@ -508,7 +604,7 @@ AGENT_CMD="claude -p"
       buttons[j].tabIndex = on ? 0 : -1;
     });
     if (focus) buttons[i].focus();
-    try { history.replaceState(null, "", "#" + stages[i].id); } catch (e) {}
+    if (userAction) { try { history.replaceState(null, "", "#" + stages[i].id); } catch (e) {} }
   }
   stages.forEach(function (s, i) {
     var b = document.createElement("button");
@@ -516,13 +612,13 @@ AGENT_CMD="claude -p"
     b.id = "t-" + s.id; b.setAttribute("aria-controls", s.id);
     b.innerHTML = '<span class="n">' + (i + 1) + "</span>" + s.getAttribute("data-label");
     s.setAttribute("role", "tabpanel"); s.setAttribute("aria-labelledby", b.id);
-    b.addEventListener("click", function () { select(i, false); });
+    b.addEventListener("click", function () { select(i, false, true); });
     b.addEventListener("keydown", function (e) {
       var n = stages.length;
-      if (e.key === "ArrowRight") { e.preventDefault(); select((i + 1) % n, true); }
-      if (e.key === "ArrowLeft") { e.preventDefault(); select((i - 1 + n) % n, true); }
-      if (e.key === "Home") { e.preventDefault(); select(0, true); }
-      if (e.key === "End") { e.preventDefault(); select(n - 1, true); }
+      if (e.key === "ArrowRight") { e.preventDefault(); select((i + 1) % n, true, true); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); select((i - 1 + n) % n, true, true); }
+      if (e.key === "Home") { e.preventDefault(); select(0, true, true); }
+      if (e.key === "End") { e.preventDefault(); select(n - 1, true, true); }
     });
     tabs.appendChild(b); buttons.push(b);
   });
