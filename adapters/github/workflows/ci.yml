@@ -21,7 +21,13 @@ jobs:
           TITLE: ${{ github.event.pull_request.title }}
           BODY: ${{ github.event.pull_request.body }}
           BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
         run: |
+          # release-please writes a fixed PR body ("generated with Release Please"). The title and the
+          # commits are still checked; only that tool-written body is skipped.
+          case "$HEAD" in
+            release-please--*) BODY="" ;;
+          esac
           printf '%s\n%s\n' "$TITLE" "$BODY" | python tools/check_attribution.py --stdin
           python tools/check_attribution.py --range "origin/$BASE..HEAD"
       - name: Evidence floor (a spec or test change for the story)
