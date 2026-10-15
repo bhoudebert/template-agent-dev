@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/bhoudebert/template-agent-dev/compare/v0.2.0...v0.3.0) (2026-10-15)
+
+
+### Features
+
+* **agentkit:** rename the ci feature to github-actions (ci stays an alias) ([#34](https://github.com/bhoudebert/template-agent-dev/issues/34)) ([9ef5e37](https://github.com/bhoudebert/template-agent-dev/commit/9ef5e37770f4dce6ce585cf2e431014f1198933c))
+
+
+### Bug Fixes
+
+* **agentkit:** drop duplicated todo block and document agentkit vs mise run ([#30](https://github.com/bhoudebert/template-agent-dev/issues/30)) ([e4d7524](https://github.com/bhoudebert/template-agent-dev/commit/e4d75246537c8273236aa37bb4a5e190e974892e))
+* **agentkit:** update --with &lt;feature&gt; installs that feature's files; reuse an open agentkit branch ([#33](https://github.com/bhoudebert/template-agent-dev/issues/33)) ([ef7f903](https://github.com/bhoudebert/template-agent-dev/commit/ef7f9037a4c159c7b6c95e575639077c3c0ffda7))
+
 ## [0.2.0](https://github.com/bhoudebert/template-agent-dev/compare/v0.1.1...v0.2.0) (2026-10-14)
 
 
