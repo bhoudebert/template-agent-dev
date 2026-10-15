@@ -27,6 +27,8 @@ agentkit install --plan      # see what it would do
 agentkit install             # a branch and one commit; nothing is pushed; review it as a PR
 ```
 
+`agentkit` manages the kit (install, update, status, todo); `mise run` does the daily work ([which one when](docs/REFERENCE.md#three-ways-to-run-things)).
+
 Full steps, first-run checklist, updates, conflicts and removal: **[docs/INSTALL.md](docs/INSTALL.md)**.
 
 ### How updates reach you (read this once)
