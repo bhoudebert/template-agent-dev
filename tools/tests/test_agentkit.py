@@ -1,4 +1,5 @@
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -403,6 +404,24 @@ class ChangesHistory(unittest.TestCase):
         agentkit.add_to_latest_change(t, ["", "### Reconciled by a model", "- `f`: kept both"])
         txt = self.text(d)
         self.assertLess(txt.index("Reconciled by a model"), txt.index("0.1.1 -> 0.2.0"))
+
+
+class WorkflowsFitAdoptingRepos(unittest.TestCase):
+    def test_ci_does_not_run_kit_only_paths_unconditionally(self):
+        text = (ROOT / "adapters/github/workflows/ci.yml").read_text()
+        i = text.index("tools/tests")
+        step = text[text.rindex("      - ", 0, i):i + 80]
+        self.assertIn("hashFiles('tools/tests/*.py')", step)      # `tools/tests` is not installed elsewhere
+
+    def test_what_ci_runs_exists_after_install(self):
+        d = host_repo()
+        self.assertEqual(cli("install", "--target", d, "--with", "github-actions", "--yes"), 0)
+        text = (ROOT / "adapters/github/workflows/ci.yml").read_text()
+        used = set(re.findall(r"\b(tools/[A-Za-z0-9_]+\.(?:py|sh))\b", text))
+        self.assertTrue(used)
+        for rel in sorted(used):
+            self.assertTrue((d / rel).exists(), f"{rel} is run by ci.yml but not installed")
+        self.assertFalse((d / "tools/tests").exists())
 
 
 class KitCompleteness(unittest.TestCase):

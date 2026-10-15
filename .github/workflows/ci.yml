@@ -40,10 +40,14 @@ jobs:
       - run: python tools/trace_check.py
       - name: Index is up to date
         run: python tools/index.py --check
-      - name: Tool tests
+      - name: Kit tool tests (only in the kit's own repository; they are not installed elsewhere)
+        if: hashFiles('tools/tests/*.py') != ''
         run: python -m unittest discover -s tools/tests
       - uses: actions/setup-node@v4
-        if: hashFiles('package.json') != ''
+        if: hashFiles('package.json', '*/package.json') != ''
         with: { node-version: 24 }
+      - name: Project setup (your .agents/ci-setup.sh: install dependencies, start services)
+        if: hashFiles('.agents/ci-setup.sh') != ''
+        run: sh .agents/ci-setup.sh
       - name: Project tests
         run: sh tools/projecttest.sh
