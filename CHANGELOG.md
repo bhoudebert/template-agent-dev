@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/bhoudebert/template-agent-dev/compare/v0.3.0...v0.3.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* **agentkit:** keep the last 10 updates in CHANGES.md, newest first ([#35](https://github.com/bhoudebert/template-agent-dev/issues/35)) ([9f4f826](https://github.com/bhoudebert/template-agent-dev/commit/9f4f826ba5dcbb305f4ee1044ba6bd199b5ed3ed))
+* **ci:** do not run the kit's own tests in adopting repos; add a project setup hook ([#37](https://github.com/bhoudebert/template-agent-dev/issues/37)) ([6451f5a](https://github.com/bhoudebert/template-agent-dev/commit/6451f5aa2190d13b035cf1a3a354aa1ddb5ab94e))
+
 ## [0.3.0](https://github.com/bhoudebert/template-agent-dev/compare/v0.2.0...v0.3.0) (2026-10-15)
 
 
