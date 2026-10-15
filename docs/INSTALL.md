@@ -79,6 +79,10 @@ The "stuck" cases:
 mise is recommended, not required: every task is a plain `python3 tools/...` command underneath.
 Your repository must be a git repository with a clean working tree (the installer refuses otherwise).
 
+> **Which command do I type?** `agentkit ...` manages the kit (install, update, status, todo, uninstall);
+> `mise run ...` does the day-to-day work (stories, stages, review, ship, tests). The `kit:*` mise tasks just
+> call `agentkit`. Full table: [Three ways to run things](REFERENCE.md#three-ways-to-run-things).
+
 ## 1. Get the installer
 
 **From a release (no clone).** One executable file holds the engine and the exact kit for that version. It is published as `agentkit-<arch>-<os>.tar.gz` (the same bytes for every platform, named so mise and `curl | tar` find it) with an `agentkit.sha256`.

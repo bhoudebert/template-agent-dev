@@ -2,6 +2,42 @@
 
 Lookup tables. For the story of how to work, see [WORKFLOW.md](WORKFLOW.md).
 
+## Three ways to run things
+
+The same engine answers to three names. They do the same work; pick by where you are.
+
+| You type | What it is | Use it for |
+|---|---|---|
+| `agentkit <command>` | the installed **program** (one file on your PATH) | managing the kit itself: install, update, status, todo, uninstall. Works before the kit is in a repo. |
+| `mise run <task>` | short tasks defined in the repo (`.config/mise/conf.d/agentkit.toml`) | day-to-day work: stories, stages, review, ship, tests. Needs the kit installed and `mise trust`. |
+| `python3 tools/<file>.py` | the repo's own copies of the tools | what the mise tasks call underneath; use it when mise is not available, or to see exactly what runs. |
+
+Rule of thumb: **`agentkit` to manage the kit, `mise run` to do the work.** Every `kit:*` mise task is a
+wrapper that calls the `agentkit` on your PATH (or the repo's `tools/agentkit.py` if there is none), so
+`mise run kit:status` and `agentkit status` are the same command.
+
+Do not confuse `mise run status` (your **stories** and what stage is next) with `agentkit status` (the
+**kit**: which of its files are clean, edited by you, or changed upstream).
+
+### `agentkit` commands
+
+Run it from the repository (`--target <dir>` to point elsewhere). Every command that writes works on a
+branch, as one commit, and pushes nothing.
+
+| Command | Effect | mise equivalent |
+|---|---|---|
+| `agentkit --version` / `version` | the release you have (a repo copy reports the version it was installed from) | |
+| `agentkit install [--with ci,docs,release,pointers] [--plan] [--yes]` | add the kit to this repository | `kit:install <target>` |
+| `agentkit status` | per file: clean / you edited / kit changed / both | `kit:status` |
+| `agentkit update [tools\|agents\|docs\|ci\|all] [--plan] [--with ...]` | bring the program's newer files in | `kit:update` |
+| `agentkit reconcile [--brief] [--plan]` | resolve update conflicts with a model, or write briefs for your assistant | `kit:reconcile` |
+| `agentkit uninstall [--plan] [--force]` | remove what the kit installed; your edits and starters stay | `kit:uninstall` |
+| `agentkit todo` | what is left to do in this repo, in order; also works before install | `kit:todo` |
+| `agentkit check` | fail while unresolved conflict markers remain | `kit:check` |
+
+Common flags: `--plan` shows what would change and writes nothing; `--yes` skips the confirmation prompt;
+`--no-branch` / `--no-commit` keep the change on the current branch or uncommitted.
+
 ## mise tasks
 
 Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
