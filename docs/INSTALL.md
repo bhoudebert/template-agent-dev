@@ -236,9 +236,20 @@ What it does, and does not do:
 - Adding it on a repository that is already installed goes on the same `chore/agentkit-*` branch if you are
   on one, otherwise on a new one. Merge that PR and the workflows start running.
 - Make `checks` a required check in the repository's branch protection, or CI only advises.
-- The workflow does not install your project's dependencies (`npm ci`, `cargo fetch`, ...). A monorepo
-  usually needs a step for that added to `agentkit-ci.yml`; then list the file in `.agentkit/ignore` so an
-  update does not overwrite your edit.
+- **Your project needs dependencies or services to test?** The workflow does not guess. Put the setup in
+  `.agents/ci-setup.sh` (yours: the kit never ships or updates it) and the workflow runs it before the
+  project tests, for example:
+
+  ```sh
+  # .agents/ci-setup.sh
+  set -e
+  (cd ui && npm ci)
+  (cd backend && cargo fetch)
+  ```
+
+  Node is set up when there is a `package.json` at the root or one folder down; Rust and Python are on the
+  runner already. Anything else (a database, a system package) goes in that script.
+- The kit's own unit tests (`tools/tests`) run only in the kit's repository; they are not installed in yours.
 
 ## 4. Make it yours (10 minutes)
 
