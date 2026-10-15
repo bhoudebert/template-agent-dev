@@ -6,9 +6,9 @@
       "default": true,
       "doc": "tools, hooks, schemas, templates, roles, skills, policies, pipeline, AGENTS.md block, mise tasks"
     },
-    "ci": {
+    "github-actions": {
       "default": false,
-      "doc": "GitHub workflows, installed once as agentkit-*.yml; refreshed only by `update ci`"
+      "doc": "GitHub Actions workflows, installed once as agentkit-*.yml; refreshed only by `update github-actions` (alias: ci)"
     },
     "docs": {
       "default": false,
@@ -155,8 +155,8 @@
       "dst": "{path}"
     },
     {
-      "feature": "ci",
-      "scope": "ci",
+      "feature": "github-actions",
+      "scope": "github-actions",
       "class": "managed",
       "match": "adapters/github/workflows/*.yml",
       "dst": ".github/workflows/agentkit-{name}",
@@ -209,7 +209,7 @@
     },
     {
       "feature": "release",
-      "scope": "ci",
+      "scope": "github-actions",
       "class": "managed",
       "match": "adapters/github/workflows/release-please.yml",
       "dst": ".github/workflows/agentkit-{name}"

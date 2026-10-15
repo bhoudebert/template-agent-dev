@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """agentkit: install and update this workflow kit in another repository (stdlib only, needs git).
 
-    agentkit.py install [--target DIR] [--from SRC] [--with ci,docs,release,pointers] [--plan]
+    agentkit.py install [--target DIR] [--from SRC] [--with github-actions,docs,release,pointers] [--plan]
     agentkit.py status  [--target DIR]
-    agentkit.py update  [scope ...] [--target DIR] [--from SRC] [--plan]   scopes: tools agents docs ci all
+    agentkit.py update  [scope ...] [--target DIR] [--from SRC] [--plan]   scopes: tools agents docs github-actions all
     agentkit.py todo    [--target DIR]                                      what is left to do here, in order
     agentkit.py check   [--target DIR]                                      unresolved conflict markers
     agentkit.py uninstall [--target DIR] [--plan] [--force]                 remove what the kit installed
@@ -55,8 +55,18 @@ IGNORE = ".agentkit/ignore"
 CHANGES = ".agentkit/CHANGES.md"
 MARK_MD = ("<!-- agentkit:begin -->", "<!-- agentkit:end -->")
 MARK_HASH = ("# agentkit:begin", "# agentkit:end")
-DEFAULT_UPDATE_SCOPES = ["tools", "agents", "docs"]   # `ci` is refreshed only when asked for
-ALL_SCOPES = ["tools", "agents", "docs", "ci"]
+DEFAULT_UPDATE_SCOPES = ["tools", "agents", "docs"]   # github-actions is refreshed only when asked for
+ALL_SCOPES = ["tools", "agents", "docs", "github-actions"]
+ALIASES = {"ci": "github-actions"}                    # the old name of the feature and scope
+
+
+def canon(name):
+    return ALIASES.get(name, name)
+
+
+def canon_csv(text):
+    return list(dict.fromkeys(canon(x.strip()) for x in (text or "").split(",") if x.strip()))
+
 SKIP_DIRS = {".git", "__pycache__", "node_modules", ".venv"}
 
 # A real conflict region (from `git merge-file -L local -L base -L kit`) has these exact marker lines.
@@ -147,6 +157,10 @@ class Kit:
         if not mf.exists():
             raise SystemExit(f"{self.root} is not an agentkit source (no kit.json)")
         self.manifest = json.loads(mf.read_text(encoding="utf-8"))
+        # an older kit still names the feature and scope `ci`
+        self.manifest["features"] = {canon(k): v for k, v in self.manifest["features"].items()}
+        for e in self.manifest["entries"]:
+            e["feature"], e["scope"] = canon(e["feature"]), canon(e["scope"])
         self.label = label or str(self.root)
 
     def files(self):
@@ -234,7 +248,13 @@ class Target:
 
     def lock(self):
         p = self.path(LOCK)
-        return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+        if not p.exists():
+            return None
+        lock = json.loads(p.read_text(encoding="utf-8"))
+        lock["features"] = list(dict.fromkeys(canon(f) for f in lock.get("features", [])))
+        for rec in lock.get("files", {}).values():
+            rec["scope"] = canon(rec.get("scope", ""))
+        return lock
 
     def write_lock(self, lock):
         p = self.path(LOCK)
@@ -403,7 +423,7 @@ def cmd_install(args):
     try:
         if target.lock() and not args.plan:
             raise SystemExit("already installed here: use `update` (or `status`)")
-        features = [f.strip() for f in (args.with_ or "").split(",") if f.strip()]
+        features = canon_csv(args.with_)
         unknown = [f for f in features if f not in kit.manifest["features"]]
         if unknown:
             raise SystemExit(f"unknown feature(s) {unknown}; available: {sorted(kit.manifest['features'])}")
@@ -555,17 +575,18 @@ def cmd_update(args):
         raise SystemExit("agentkit is not installed here: run `install`")
     kit, cleanup = open_source(args.source, args.ref, fallback=lock.get("source"))
     try:
+        args.scopes = [canon(x) for x in args.scopes]
         scopes = ALL_SCOPES if "all" in args.scopes else (args.scopes or DEFAULT_UPDATE_SCOPES)
         bad = [s for s in scopes if s not in ALL_SCOPES]
         if bad:
             raise SystemExit(f"unknown scope(s) {bad}; use {ALL_SCOPES} or all")
-        features = list(dict.fromkeys(lock["features"] + [f for f in (args.with_ or "").split(",") if f.strip()]))
+        features = list(dict.fromkeys(lock["features"] + canon_csv(args.with_)))
         extra = [f for f in features if f != "core"]
         unknown = [f for f in extra if f not in kit.manifest["features"]]
         if unknown:
             raise SystemExit(f"unknown feature(s) {unknown}; available: {sorted(kit.manifest['features'])}")
         if not args.scopes:
-            # `--with ci` must install the ci files now, and a feature recorded in the lock whose files were
+            # `--with github-actions` must install those files now, and a feature recorded in the lock whose files were
             # never written (an earlier `--with ci` that only touched the lock) is completed too.
             for e in kit.entries(extra):
                 if e["class"] != "seed" and e["dst"] not in lock["files"] and e["scope"] not in scopes:
@@ -996,7 +1017,7 @@ def main(argv=None):
 
     i = sub.add_parser("install")
     common(i)
-    i.add_argument("--with", dest="with_", default="", help="features: ci,docs,release,pointers")
+    i.add_argument("--with", dest="with_", default="", help="features: github-actions,docs,release,pointers")
     i.add_argument("--allow-collisions", action="store_true",
                    help="install even if a file of yours in tools/ shares a name with a kit module")
     i.set_defaults(fn=cmd_install)
@@ -1005,8 +1026,8 @@ def main(argv=None):
     s.set_defaults(fn=cmd_status)
     u = sub.add_parser("update")
     common(u)
-    u.add_argument("scopes", nargs="*", help="tools agents docs ci all (default: tools agents docs)")
-    u.add_argument("--with", dest="with_", default="", help="add features: ci,docs,release,pointers")
+    u.add_argument("scopes", nargs="*", help="tools agents docs github-actions all (default: tools agents docs)")
+    u.add_argument("--with", dest="with_", default="", help="add features: github-actions,docs,release,pointers")
     u.set_defaults(fn=cmd_update)
     r = sub.add_parser("reconcile", help="resolve update conflicts with a model (or write briefs for an assistant)")
     r.add_argument("--target", default=".")

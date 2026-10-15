@@ -221,7 +221,11 @@ the number and there is no second counter.
 - **Versions**: SemVer via [release-please](https://github.com/googleapis/release-please). It maintains a release PR on `main`; merging it tags `vX.Y.Z` and updates `CHANGELOG.md`. Never edit changelog, version or tags by hand. Set `release-type` in `release-please-config.json` for your stack.
 - Policy text agents read: `.agents/policies/git.md`.
 
-## Automating in CI (GitHub)
+## Automating in CI (GitHub Actions)
+
+In a repository that has the kit, add the workflows with `agentkit update --with github-actions` (or
+`agentkit install --with github-actions` for a new install); see [Turning on CI](INSTALL.md#turning-on-ci-github-actions).
+GitHub Actions is the only CI the kit supports today. Inside the kit's own clone:
 
 ```sh
 adapters/install.sh github tools
@@ -236,7 +240,7 @@ adapters/install.sh github tools
   | Secret | `AGENT_API_KEY` | token for that endpoint |
   | Variable (optional) | `AGENT_REASONING_EFFORT`, `AGENT_MAX_TOKENS`, `AGENT_PROVIDER`, `AGENT_CMD` | `none`, `16000` |
 
-- **Not configured? The agent workflows skip** with a notice (they do not fail). The deterministic `ci` workflow is independent and always runs.
+- **Not configured? The agent workflows skip** with a notice (they do not fail). The deterministic `agentkit-ci` workflow is independent and always runs.
 - A GitHub-hosted runner cannot reach a model on your own machine (`localhost`). Use a hosted OpenAI-compatible API, or register a self-hosted runner on a machine that can reach your model and set `runs-on: self-hosted`.
 - Name PR branches `feature/US-002-...` so the reviewer finds the story id.
 - The agent workflows read branch names, titles and issue text through `env`, never inline in shell. Still, try them on a throwaway repo first; triage treats issue text as untrusted input.

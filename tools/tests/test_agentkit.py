@@ -312,8 +312,32 @@ class UpdateFeaturesAndBranches(unittest.TestCase):
         self.assertEqual(cli("update", "--with", "ci", "--target", d, "--yes"), 0)
         self.assertTrue((d / ".github/workflows/agentkit-ci.yml").exists())
         lock = json.loads((d / ".agentkit/lock.json").read_text())
-        self.assertIn("ci", lock["features"])
-        self.assertIn(".github/workflows/agentkit-ci.yml", lock["files"])
+        self.assertIn("github-actions", lock["features"])
+        self.assertNotIn("ci", lock["features"])
+        self.assertEqual(lock["files"][".github/workflows/agentkit-ci.yml"]["scope"], "github-actions")
+
+    def test_new_name_and_old_alias_are_equivalent(self):
+        for name in ("github-actions", "ci"):
+            d = self.install_core()
+            self.assertEqual(cli("update", "--with", name, "--target", d, "--yes"), 0)
+            self.assertTrue((d / ".github/workflows/agentkit-ci.yml").exists(), name)
+        d = self.install_core()
+        self.assertEqual(cli("update", "github-actions", "--with", "github-actions", "--target", d, "--yes"), 0)
+        self.assertTrue((d / ".github/workflows/agentkit-ci.yml").exists())
+
+    def test_a_lock_written_with_the_old_name_is_read(self):
+        d = host_repo()
+        cli("install", "--target", d, "--with", "ci", "--yes")
+        git(d, "switch", "-q", "main"); git(d, "merge", "-q", "--ff-only", "chore/agentkit-install")
+        lock = json.loads((d / ".agentkit/lock.json").read_text())
+        lock["features"] = [("ci" if f == "github-actions" else f) for f in lock["features"]]
+        for rec in lock["files"].values():
+            if rec["scope"] == "github-actions":
+                rec["scope"] = "ci"
+        (d / ".agentkit/lock.json").write_text(json.dumps(lock))
+        git(d, "commit", "-qam", "old-style lock")
+        self.assertEqual(cli("status", "--target", d), 0)
+        self.assertEqual(cli("update", "ci", "--target", d, "--yes"), 0)
 
     def test_feature_recorded_but_never_installed_is_completed(self):
         d = self.install_core()

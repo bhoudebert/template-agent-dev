@@ -148,10 +148,10 @@ description = "Does this branch leave evidence (a spec or test change) for its s
 run = "python3 tools/evidence.py"
 
 [tasks."kit:install"]
-description = "Install this kit into another repo:  mise run kit:install ../my-repo [--with ci,docs,release,pointers] [--plan]"
+description = "Install this kit into another repo:  mise run kit:install ../my-repo [--with github-actions,docs,release,pointers] [--plan]"
 usage = '''
 arg "<target>" help="path of the repository to install into"
-flag "--with <features>" help="optional features: ci, docs, release, pointers (core is always installed)"
+flag "--with <features>" help="optional features: github-actions, docs, release, pointers (core is always installed)"
 flag "--plan" help="show what would change, write nothing"
 '''
 run = 'python3 tools/agentkit.py install --target "${usage_target}" ${usage_with:+--with "$usage_with"} $([ "${usage_plan}" = "true" ] && echo --plan)'
@@ -163,7 +163,7 @@ run = "sh tools/kit.sh status"
 [tasks."kit:update"]
 description = "Update the kit here on a new branch:  mise run kit:update [tools|agents|docs|ci|all] [--plan]"
 usage = '''
-arg "[scope]" var=#true help="tools, agents, docs, ci or all (default: tools agents docs; ci only when asked)"
+arg "[scope]" var=#true help="tools, agents, docs, github-actions or all (default: tools agents docs; github-actions only when asked)"
 flag "--plan" help="show what would change, write nothing"
 '''
 run = 'sh tools/kit.sh update ${usage_scope} $([ "${usage_plan}" = "true" ] && echo --plan)'
