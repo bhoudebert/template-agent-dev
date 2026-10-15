@@ -407,6 +407,43 @@ def work_branch(target, name, args, kind):
     return start, branch, False
 
 
+CHANGES_HEAD = "# agentkit updates\n\nNewest first. The last %d updates are kept; the rest is in git history.\n"
+CHANGES_KEEP = 10
+
+
+def _change_entries(text):
+    """Split a CHANGES.md into its entries (each starts with `## update `). A file written by an older
+    kit holds one `# agentkit update A -> B` report: it becomes the oldest entry."""
+    if not text.strip():
+        return []
+    if text.lstrip().startswith("# agentkit update "):
+        body = text.strip("\n").replace("\n## ", "\n### ")
+        return ["## update " + body.split("\n", 1)[0][len("# agentkit update "):] + "\n" + (body.split("\n", 1) + [""])[1]]
+    parts = re.split(r"(?m)^(?=## update )", text)
+    return [p.strip("\n") + "\n" for p in parts if p.startswith("## update ")]
+
+
+def write_changes(target, entry):
+    """Put `entry` (a `## update A -> B` block) on top of .agentkit/CHANGES.md and trim the old ones."""
+    p = target.path(CHANGES)
+    old = _change_entries(p.read_text(encoding="utf-8")) if p.exists() else []
+    entries = [entry.strip("\n") + "\n"] + old
+    body = "\n".join(entries[:CHANGES_KEEP])
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text((CHANGES_HEAD % CHANGES_KEEP) + "\n" + body, encoding="utf-8")
+
+
+def add_to_latest_change(target, extra_lines):
+    """Append lines to the newest entry (used by reconcile)."""
+    p = target.path(CHANGES)
+    entries = _change_entries(p.read_text(encoding="utf-8")) if p.exists() else []
+    if not entries:
+        entries = ["## update (reconcile)\n"]
+    entries[0] = entries[0].rstrip("\n") + "\n" + "\n".join(extra_lines).strip("\n") + "\n"
+    body = "\n".join(entries[:CHANGES_KEEP])
+    p.write_text((CHANGES_HEAD % CHANGES_KEEP) + "\n" + body, encoding="utf-8")
+
+
 def commit(target, paths, message):
     run(["git", "add", "-A", "--", *paths], cwd=target.root)
     p = run(["git", "-c", "commit.gpgsign=false", "commit", "-q", "-m", message], cwd=target.root, check=False)
@@ -673,12 +710,12 @@ def cmd_update(args):
         old = lock["version"]
         lock["version"], lock["features"] = kit.version(), features
         target.write_lock(lock)
-        lines = [f"# agentkit update {old} -> {kit.version()}", "",
+        lines = [f"## update {old} -> {kit.version()}", "",
                  "Review this diff as you would any change. Files below need your attention.", ""]
         if conflicts:
-            lines += ["## Conflicts to resolve (search for `<<<<<<< local`)", ""] + [f"- `{c}`" for c in conflicts] + [""]
-        lines += ["## Actions", ""] + [f"- {a}: `{d}`" for d, a, _, _ in shown]
-        target.path(CHANGES).write_text("\n".join(lines) + "\n", encoding="utf-8")
+            lines += ["### Conflicts to resolve (search for `<<<<<<< local`)", ""] + [f"- `{c}`" for c in conflicts] + [""]
+        lines += ["### Actions", ""] + [f"- {a}: `{d}`" for d, a, _, _ in shown]
+        write_changes(target, "\n".join(lines))
         if (target.root / "tools" / "index.py").exists():
             subprocess.run([sys.executable, "tools/index.py"], cwd=target.root, capture_output=True)
             if (target.root / "docs" / "INDEX.md").exists():
@@ -813,13 +850,11 @@ def cmd_reconcile(args):
     for dst, problems in failed:
         print(f"LEFT AS IS {dst}: {'; '.join(problems)}")
     if report:
-        cp = target.path(CHANGES)
-        extra = ["", "## Reconciled by a model (review each diff)", ""]
+        extra = ["", "### Reconciled by a model (review each diff)", ""]
         for dst, rationale, dropped in report:
             extra.append(f"- `{dst}`: {rationale or 'no rationale given'}")
             extra += [f"  - project line not in the result: `{l[:100]}`" for l in dropped[:10]]
-        cp.write_text((cp.read_text(encoding="utf-8") if cp.exists() else "# agentkit\n") + "\n".join(extra) + "\n",
-                      encoding="utf-8")
+        add_to_latest_change(target, extra)
         if not args.no_commit:
             commit(target, done + [CHANGES], "chore(agentkit): reconcile update conflicts")
     return 1 if failed else 0

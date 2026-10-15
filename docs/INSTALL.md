@@ -359,7 +359,7 @@ If those four work, the install is sound. The first real story is the tutorial: 
 ```sh
 agentkit status               # per file: clean / you edited / kit changed / both
 agentkit update --plan        # what would change, nothing written
-agentkit update               # branch chore/agentkit-update-<version>, one commit, a CHANGES.md
+agentkit update               # branch chore/agentkit-update-<version>, one commit, a new entry in .agentkit/CHANGES.md
 ```
 
 | Command | Touches |
@@ -473,4 +473,4 @@ edited (add `--force` to remove edited files too).
 
 `.agentkit/lock.json` (commit it): the kit version, the features, and per file its class and the hash that was
 installed. `.agentkit/base/` holds the installed copy of the files that can be merged (roles, policies, blocks) so
-a merge never needs the network. `.agentkit/CHANGES.md` is rewritten by each update.
+a merge never needs the network. `.agentkit/CHANGES.md` keeps the last 10 updates, newest first; older ones are in git history.

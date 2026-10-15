@@ -359,6 +359,52 @@ class UpdateFeaturesAndBranches(unittest.TestCase):
         self.assertEqual(branches, [first])
 
 
+class ChangesHistory(unittest.TestCase):
+    def target(self):
+        d = host_repo()
+        return agentkit.Target(d), d
+
+    def text(self, d):
+        return (d / ".agentkit/CHANGES.md").read_text()
+
+    def test_newest_first_and_older_kept(self):
+        t, d = self.target()
+        agentkit.write_changes(t, "## update 0.1.1 -> 0.2.0\n\n### Actions\n- update: `a`")
+        agentkit.write_changes(t, "## update 0.2.0 -> 0.3.0\n\n### Actions\n- update: `b`")
+        txt = self.text(d)
+        self.assertLess(txt.index("0.2.0 -> 0.3.0"), txt.index("0.1.1 -> 0.2.0"))
+        self.assertIn("`a`", txt)
+        self.assertIn("`b`", txt)
+
+    def test_only_the_last_ten_are_kept(self):
+        t, d = self.target()
+        for i in range(15):
+            agentkit.write_changes(t, f"## update 0.{i} -> 0.{i + 1}\n")
+        txt = self.text(d)
+        self.assertEqual(txt.count("## update "), agentkit.CHANGES_KEEP)
+        self.assertIn("0.14 -> 0.15", txt)
+        self.assertNotIn("0.0 -> 0.1\n", txt)
+
+    def test_a_report_from_an_older_kit_becomes_the_oldest_entry(self):
+        t, d = self.target()
+        (d / ".agentkit").mkdir(exist_ok=True)
+        (d / ".agentkit/CHANGES.md").write_text(
+            "# agentkit update 0.1.1 -> 0.2.0\n\nReview.\n\n## Actions\n\n- update: `x`\n")
+        agentkit.write_changes(t, "## update 0.2.0 -> 0.3.0\n")
+        txt = self.text(d)
+        self.assertEqual(txt.count("## update "), 2)
+        self.assertLess(txt.index("0.2.0 -> 0.3.0"), txt.index("0.1.1 -> 0.2.0"))
+        self.assertIn("`x`", txt)
+
+    def test_reconcile_note_goes_in_the_newest_entry(self):
+        t, d = self.target()
+        agentkit.write_changes(t, "## update 0.1.1 -> 0.2.0\n")
+        agentkit.write_changes(t, "## update 0.2.0 -> 0.3.0\n")
+        agentkit.add_to_latest_change(t, ["", "### Reconciled by a model", "- `f`: kept both"])
+        txt = self.text(d)
+        self.assertLess(txt.index("Reconciled by a model"), txt.index("0.1.1 -> 0.2.0"))
+
+
 class KitCompleteness(unittest.TestCase):
     def test_every_tool_is_shipped_or_deliberately_not(self):
         k = agentkit.Kit(ROOT)
