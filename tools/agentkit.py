@@ -346,17 +346,19 @@ def announce(args, branch, kind):
     print(f"\nThis {kind} {commit_txt} on {where}. Nothing is pushed; `main` is not touched.")
 
 
-def next_steps(target, base, branch, args, after=()):
+def next_steps(target, base, branch, args, after=(), reused=False):
     """Numbered follow-up: what to do with the branch just created."""
     lines = []
     if args.no_commit:
         lines.append("review: `git diff`, then commit when happy")
     else:
         lines.append("review what changed: `git show --stat HEAD`")
-    if branch:
+    if branch and reused:
+        lines.append(f"publish: `git push` (the open PR for `{branch}` updates itself)")
+    elif branch:
         if _has_remote(target):
             lines.append(f"publish: `git push -u origin {branch}`, then open a PR and merge it "
-                         "(`gh pr create --fill`, or `mise trust && mise run ship`)")
+                         "(`gh pr create --fill-first`, or `mise trust && mise run ship`)")
             lines.append(f"after the merge: `git switch {base or 'main'} && git pull`")
         else:
             lines.append(f"no git remote yet: add one (`git remote add origin <url>`), then `git push -u origin {branch}`")
@@ -371,6 +373,18 @@ def installed_version(target):
         return json.loads(target.path(LOCK).read_text(encoding="utf-8"))["version"]
     except (OSError, ValueError, KeyError):
         return None
+
+
+def work_branch(target, name, args, kind):
+    """The branch a kit change goes on. Already on a chore/agentkit-* branch: stay on it (same PR)."""
+    cur = run(["git", "branch", "--show-current"], cwd=target.root).stdout.strip()
+    if cur.startswith("chore/agentkit-"):
+        print(f"\nAlready on `{cur}`: this {kind} is added to it, no new branch and no new PR.")
+        return None, cur, True
+    announce(args, name, kind)
+    confirm(args, "")
+    start, branch = new_branch(target, name)
+    return start, branch, False
 
 
 def commit(target, paths, message):
@@ -546,7 +560,17 @@ def cmd_update(args):
         if bad:
             raise SystemExit(f"unknown scope(s) {bad}; use {ALL_SCOPES} or all")
         features = list(dict.fromkeys(lock["features"] + [f for f in (args.with_ or "").split(",") if f.strip()]))
-        entries = [e for e in kit.entries([f for f in features if f != "core"]) if e["scope"] in scopes]
+        extra = [f for f in features if f != "core"]
+        unknown = [f for f in extra if f not in kit.manifest["features"]]
+        if unknown:
+            raise SystemExit(f"unknown feature(s) {unknown}; available: {sorted(kit.manifest['features'])}")
+        if not args.scopes:
+            # `--with ci` must install the ci files now, and a feature recorded in the lock whose files were
+            # never written (an earlier `--with ci` that only touched the lock) is completed too.
+            for e in kit.entries(extra):
+                if e["class"] != "seed" and e["dst"] not in lock["files"] and e["scope"] not in scopes:
+                    scopes = scopes + [e["scope"]]
+        entries = [e for e in kit.entries(extra) if e["scope"] in scopes]
         ignore = target.ignored()
         actions = []   # (dst, action, entry, extra)
         for e in entries:
@@ -600,11 +624,10 @@ def cmd_update(args):
         if target.dirty_tracked() and not args.no_branch:
             raise SystemExit("working tree has uncommitted changes to tracked files; commit or stash first")
         branch = start = None
+        reused = False
         if not args.no_branch:
             name = f"chore/agentkit-update-{kit.version().replace('+', '-')}"
-            announce(args, name, "update")
-            confirm(args, "")
-            start, branch = new_branch(target, name)
+            start, branch, reused = work_branch(target, name, args, "update")
         touched = [LOCK, CHANGES]
         conflicts = []
         for dst, act, e, merged in real:
@@ -644,7 +667,7 @@ def cmd_update(args):
         print(f"\nupdated on branch {branch or '(current)'}.")
         if conflicts:
             print("CONFLICTS to resolve before merging:\n  " + "\n  ".join(conflicts))
-        next_steps(target, start if branch else None, branch, args,
+        next_steps(target, start if branch else None, branch, args, reused=reused,
                    after=["resolve conflicts first (`agentkit reconcile`)"] if conflicts else [])
         return 0
     finally:
@@ -808,10 +831,9 @@ def cmd_uninstall(args):
     if target.dirty_tracked() and not args.no_branch:
         raise SystemExit("working tree has uncommitted changes to tracked files; commit or stash first")
     branch = start = None
+    reused = False
     if not args.no_branch:
-        announce(args, "chore/agentkit-uninstall", "uninstall")
-        confirm(args, "")
-        start, branch = new_branch(target, "chore/agentkit-uninstall")
+        start, branch, reused = work_branch(target, "chore/agentkit-uninstall", args, "uninstall")
     touched = [".agentkit"]
     for dst, act in plan:
         p = target.path(dst)
@@ -842,7 +864,7 @@ def cmd_uninstall(args):
     kept = [d for d, a in plan if a == "kept-edited"]
     if kept:
         print("kept because you edited them (use --force to remove):\n  " + "\n  ".join(kept))
-    next_steps(target, start if branch else None, branch, args)
+    next_steps(target, start if branch else None, branch, args, reused=reused)
     return 0
 
 

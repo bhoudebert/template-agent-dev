@@ -298,6 +298,43 @@ class Guidance(unittest.TestCase):
         self.assertEqual(rc, 0)
 
 
+class UpdateFeaturesAndBranches(unittest.TestCase):
+    def install_core(self):
+        d = host_repo()
+        self.assertEqual(cli("install", "--target", d, "--yes"), 0)
+        git(d, "switch", "-q", "main")
+        git(d, "merge", "-q", "--ff-only", "chore/agentkit-install")
+        return d
+
+    def test_update_with_ci_installs_the_workflows(self):
+        d = self.install_core()
+        self.assertFalse(list((d / ".github/workflows").glob("agentkit-*")))
+        self.assertEqual(cli("update", "--with", "ci", "--target", d, "--yes"), 0)
+        self.assertTrue((d / ".github/workflows/agentkit-ci.yml").exists())
+        lock = json.loads((d / ".agentkit/lock.json").read_text())
+        self.assertIn("ci", lock["features"])
+        self.assertIn(".github/workflows/agentkit-ci.yml", lock["files"])
+
+    def test_feature_recorded_but_never_installed_is_completed(self):
+        d = self.install_core()
+        lock = json.loads((d / ".agentkit/lock.json").read_text())
+        lock["features"].append("ci")          # what the old `update --with ci` left behind
+        (d / ".agentkit/lock.json").write_text(json.dumps(lock))
+        git(d, "commit", "-qam", "stuck lock")
+        self.assertEqual(cli("update", "--target", d, "--yes"), 0)
+        self.assertTrue((d / ".github/workflows/agentkit-ci.yml").exists())
+
+    def test_update_on_an_agentkit_branch_adds_to_it(self):
+        d = self.install_core()
+        self.assertEqual(cli("update", "--with", "pointers", "--target", d, "--yes"), 0)
+        first = git(d, "branch", "--show-current").stdout.strip()
+        self.assertTrue(first.startswith("chore/agentkit-update-"))
+        self.assertEqual(cli("update", "--with", "ci", "--target", d, "--yes"), 0)
+        self.assertEqual(git(d, "branch", "--show-current").stdout.strip(), first)
+        branches = [b for b in git(d, "branch", "--format=%(refname:short)").stdout.split() if b.startswith("chore/agentkit-update")]
+        self.assertEqual(branches, [first])
+
+
 class KitCompleteness(unittest.TestCase):
     def test_every_tool_is_shipped_or_deliberately_not(self):
         k = agentkit.Kit(ROOT)
