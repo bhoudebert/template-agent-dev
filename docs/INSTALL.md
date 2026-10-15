@@ -17,7 +17,7 @@ It adds files and one marked region in a few shared files. It never rewrites you
 | Starters (copied once, then yours) | `CONTEXT.md`, `.env.example`, empty `docs/` folders, `openspec/` | never overwritten, never updated |
 | Bookkeeping | `.agentkit/` | what was installed, so updates can tell your edits from the kit's |
 
-Optional features: `ci` (GitHub workflows, as `agentkit-*.yml`), `docs` (these docs under `docs/agentkit/`),
+Optional features: `github-actions` (GitHub Actions workflows, as `agentkit-*.yml`; the old name `ci` still works), `docs` (these docs under `docs/agentkit/`),
 `release` (release-please), `pointers` (so Claude Code, Copilot and Cursor load `AGENTS.md`).
 
 ## The mental model (read this once)
@@ -189,7 +189,7 @@ you already have with different content: **yours is kept**, and it is listed).
 
 ```sh
 agentkit install                       # core
-agentkit install --with pointers,ci    # core + assistant entry files + GitHub workflows
+agentkit install --with pointers,github-actions   # core + assistant entry files + GitHub Actions workflows
 ```
 
 Before writing, it says what it is about to do (a new branch, one commit, nothing pushed) and, on a
@@ -211,6 +211,34 @@ next steps:
 
 Nothing is on `main` until you merge that PR. `update` and `uninstall` work the same way.
 `agentkit --version` (or `agentkit version`) prints the release you have.
+
+### Turning on CI (GitHub Actions)
+
+CI is optional and off by default. Only GitHub Actions is supported today; if you use another CI, skip it
+(a GitLab adapter is not built).
+
+```sh
+agentkit install --with github-actions            # at install time, or
+agentkit update  --with github-actions            # on a repository that already has the kit
+```
+
+What it does, and does not do:
+
+- It **copies three files** into `.github/workflows/`: `agentkit-ci.yml`, `agentkit-agent-review.yml` and
+  `agentkit-agent-triage.yml`. It configures nothing on GitHub and starts nothing: GitHub runs them by
+  itself once they are pushed, because that is what it does with files in that folder.
+- `agentkit-ci.yml` needs no setup: PR title is a Conventional Commit, no assistant names, evidence floor,
+  validators, kit tests, and **your project tests** (`tools/projecttest.sh`, the same discovery as
+  `mise run test`).
+- The two `agent-*` workflows need a reachable model (repository variables `AGENT_BASE_URL`,
+  `AGENT_MODEL_STRONG` / `AGENT_MODEL_CHEAP` and secret `AGENT_API_KEY`). Without them they **skip with a
+  notice**; they do not fail. A GitHub-hosted runner cannot reach a model on your laptop.
+- Adding it on a repository that is already installed goes on the same `chore/agentkit-*` branch if you are
+  on one, otherwise on a new one. Merge that PR and the workflows start running.
+- Make `checks` a required check in the repository's branch protection, or CI only advises.
+- The workflow does not install your project's dependencies (`npm ci`, `cargo fetch`, ...). A monorepo
+  usually needs a step for that added to `agentkit-ci.yml`; then list the file in `.agentkit/ignore` so an
+  update does not overwrite your edit.
 
 ## 4. Make it yours (10 minutes)
 
@@ -340,7 +368,7 @@ agentkit update               # branch chore/agentkit-update-<version>, one comm
 | `agentkit update tools` | tools, hooks, schemas, templates, the mise task file |
 | `agentkit update agents` | roles, skills, policies, `pipeline.yaml`, the blocks in `AGENTS.md` / `.gitignore` |
 | `agentkit update docs` | the kit docs |
-| `agentkit update ci` | workflows. **Only when you ask**: CI is installed once and refreshed on purpose. |
+| `agentkit update github-actions` | the GitHub Actions workflows (`ci` is accepted as an alias). **Only when you ask**: they are installed once and refreshed on purpose. |
 
 Get the newer program first (`mise upgrade agentkit`, or re-download the release file, or `git pull` your clone): `update` copies what is **inside the program you run**, it does not fetch anything. See [The mental model](#the-mental-model-read-this-once).
 

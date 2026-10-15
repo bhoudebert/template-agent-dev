@@ -27,9 +27,9 @@ branch, as one commit, and pushes nothing.
 | Command | Effect | mise equivalent |
 |---|---|---|
 | `agentkit --version` / `version` | the release you have (a repo copy reports the version it was installed from) | |
-| `agentkit install [--with ci,docs,release,pointers] [--plan] [--yes]` | add the kit to this repository | `kit:install <target>` |
+| `agentkit install [--with github-actions,docs,release,pointers] [--plan] [--yes]` | add the kit to this repository | `kit:install <target>` |
 | `agentkit status` | per file: clean / you edited / kit changed / both | `kit:status` |
-| `agentkit update [tools\|agents\|docs\|ci\|all] [--plan] [--with ...]` | bring the program's newer files in | `kit:update` |
+| `agentkit update [tools\|agents\|docs\|github-actions\|all] [--plan] [--with ...]` | bring the program's newer files in | `kit:update` |
 | `agentkit reconcile [--brief] [--plan]` | resolve update conflicts with a model, or write briefs for your assistant | `kit:reconcile` |
 | `agentkit uninstall [--plan] [--force]` | remove what the kit installed; your edits and starters stay | `kit:uninstall` |
 | `agentkit todo` | what is left to do in this repo, in order; also works before install | `kit:todo` |
@@ -61,7 +61,7 @@ Run `mise tasks` for the live list. `<id>` is `US-NNN` or `INC-NNN`.
 | `prepare` | `<stage> <id>` | Prompt mode: write `.agents/out/bundle-<stage>-<id>.md` and print the receipt |
 | `apply` | `<stage> <id> --receipt <code> (--response <file> \| --worktree)` | Prompt mode: verify receipt, confine, validate, trace, log |
 | `index` / `index:check` | | Regenerate / verify `docs/INDEX.md` |
-| `kit:install` | `<target> [--with ci,docs,release] [--plan]` | Install the kit into another repository, on a branch, one commit |
+| `kit:install` | `<target> [--with github-actions,docs,release] [--plan]` | Install the kit into another repository, on a branch, one commit |
 | `kit:status` | | In an adopting repo: clean / you edited / kit changed / both |
 | `kit:update` | `[tools\|agents\|docs\|ci\|all] [--plan]` | Update the kit on a new branch; `ci` only when asked |
 | `kit:todo` | | What is left to do in this repo, in order (also `agentkit todo`, usable before installing) |
