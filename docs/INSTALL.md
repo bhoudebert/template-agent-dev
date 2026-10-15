@@ -202,7 +202,7 @@ installed on branch chore/agentkit-install.
 next steps:
   1. review what changed: `git show --stat HEAD`
   2. publish: `git push -u origin chore/agentkit-install`, then open a PR and merge it
-     (`gh pr create --fill`, or `mise trust && mise run ship`)
+     (`gh pr create --fill-first`, or `mise trust && mise run ship`)
   3. after the merge: `git switch main && git pull`
   4. then, on the base branch: `mise trust; mise run hooks`
   5. fill in CONTEXT.md (stack, test command)
